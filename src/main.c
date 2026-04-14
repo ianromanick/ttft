@@ -1,0 +1,367 @@
+/*
+ * Copyright © 2026 Ian D. Romanick
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+#include <stdio.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <poll.h>
+#include <termios.h>
+#include <assert.h>
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
+/* Tetris well is 10 blocks wide by 20 blocks tall. This will be drawn as 20
+ * characters by 20 characters. The well is drawn 2 lines down from the top of
+ * the screen. The new piece is initially drawn at a position affectively
+ * above the top of the well.
+ *
+ * The well is stored as an array of 20 integers for the active play
+ * field, 3 extra integers for the area above the well where new
+ * pieces spawn, and 4 extra integers at the bottom. The extra at
+ * bottom is so large so various access to the well (e.g., collision
+ * detection) don't have to perform bounds checks on the array. This
+ * is the guardband.
+ */
+#define WELL_SPAWN 3
+#define WELL_GUARD_BAND 4
+#define WELL_SIZE (20 + WELL_SPAWN + WELL_GUARD_BAND)
+
+struct tetromino_frame {
+    unsigned shift;
+    uint16_t mask[4];
+    const char *draw;
+    const char *erase;
+};
+
+struct tetromino {
+    /* One of O, I, S, Z, L, J, or T. */
+    char name;
+
+    /* Number of animation frames. 1, 2, or 4. */
+    uint8_t frames;
+
+    struct tetromino_frame f[4];
+};
+
+#include "tetrominos.h"
+
+static void
+draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
+		       uint16_t lines)
+{
+    uint16_t i;
+    uint16_t j;
+    char border[2];
+
+    fputs("\x1b[2J\x1b[3;4f\x1b[7m\x1b(0", stdout);
+
+    border[0] = 'l';
+    border[1] = 'k';
+    for (i = WELL_SPAWN; i < 20 + WELL_SPAWN; i++) {
+	printf("\x1b[7m%c%c\x1b[m", border[0], border[1]);
+
+	for (j = 15; j > 5; j--) {
+	    const uint16_t bit = 1u << j;
+
+	    if ((well[i] & bit) != 0) {
+		printf("aa");
+	    } else {
+		printf("  ");
+	    }
+	}
+
+	printf("\x1b[7m%c%c\n\x1b[4G", border[0], border[1]);
+	border[0] = 'x';
+	border[1] = 'x';
+    }
+
+    fputs("mvqqqqqqqqqqqqqqqqqqqqvj\x1b(B", stdout);
+
+    fprintf(stdout, "\x1b[3;30f\x1b[7m\x1b(0");
+    fprintf(stdout, "lwqq\x1b[m NEXT \x1b[7mqqwk\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
+
+    fprintf(stdout, "\x1b[13;30f\x1b[7m\x1b(0");
+    fprintf(stdout, "lwq\x1b[m POINTS \x1b[7mqwk\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
+
+    fprintf(stdout, "\x1b[19;30f\x1b[7m\x1b(0");
+    fprintf(stdout, "lwq\x1b[m LINES  \x1b[7mqwk\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
+    fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
+
+    fprintf(stdout, "\x1b[3;45f\x1b[0m\x1b)0");
+    for (i = 0; i < 7; i++) {
+	printf("%c: %d\x1b[%d;45f", all_pieces[i].name,
+	       piece_counts[i], 4 + i);
+    }
+}
+
+static void
+move_to(uint16_t x, uint16_t y)
+{
+    if (y == 0) {
+	printf("\x1b[;%df", x);
+    } else {
+	printf("\x1b[%d;%df", y, x);
+    }
+}
+
+static void
+erase_piece(const struct tetromino *t,
+	   uint16_t x, uint16_t y, uint16_t rotation)
+{
+    printf("\x1b[m\x1b(0");
+    move_to(6 + 2 * (x - t->f[rotation].shift), y);
+    fwrite(t->f[rotation].erase, 1,
+	   strlen(t->f[rotation].erase), stdout);
+    printf("\x1b[m\x1b(B");
+}
+
+static void
+draw_piece(const struct tetromino *t,
+	   uint16_t x, uint16_t y, uint16_t rotation)
+{
+    printf("\x1b[7m\x1b(0");
+    move_to(6 + 2 * (x - t->f[rotation].shift), y);
+    fwrite(t->f[rotation].draw, 1,
+	   strlen(t->f[rotation].draw), stdout);
+    printf("\x1b[m\x1b(B");
+}
+
+static void
+draw_complete_lines(const uint16_t *complete, uint16_t count)
+{
+    uint16_t i;
+
+    for (i = 0; i < count; i++) {
+	printf("\x1b[%d;6f\x1b(0\x1b[5maaaaaaaaaaaaaaaaaaaa", complete[i]);
+    }
+}
+
+static void
+game_init_well_state(uint16_t *well)
+{
+    uint16_t i;
+
+    for (i = 0; i < 23; i++)
+	well[i] = 0x003f;
+
+    well[23] = 0xffff;
+    well[24] = 0xffff;
+    well[25] = 0xffff;
+    well[26] = 0xffff;
+}
+
+static void
+game_set_piece(uint16_t *well, const uint16_t *piece, int x, int y)
+{
+    uint16_t *w = &well[y];
+
+    w[0] |= (piece[0] >> x);
+    w[1] |= (piece[1] >> x);
+    w[2] |= (piece[2] >> x);
+    w[3] |= (piece[3] >> x);
+}
+
+static bool
+game_can_do(const uint16_t *well, const uint16_t *piece, int x, int y)
+{
+    const uint16_t *w = &well[y];
+
+    return ((w[0] & (piece[0] >> x)) == 0 &&
+	    (w[1] & (piece[1] >> x)) == 0 &&
+	    (w[2] & (piece[2] >> x)) == 0 &&
+	    (w[3] & (piece[3] >> x)) == 0);
+}
+
+static uint16_t
+game_check_complete_lines(const uint16_t *well, uint16_t *which)
+{
+    uint16_t i;
+    uint16_t j = 0;
+
+    /* The first 3 rows of the well are not part of the game board. That is
+     * the region where pieces spawn.
+     */
+    for (i = WELL_SPAWN; i < 20 + WELL_SPAWN; i++) {
+	if (well[i] == 0xffff)
+	    which[j++] = i;
+    }
+
+    return j;
+}
+
+static void
+game_remove_lines(uint16_t * well, const uint16_t *which, uint16_t count)
+{
+    uint16_t i;
+    uint16_t j;
+
+    for (i = 0; i < count; i++) {
+	assert(i == 0 || which[i] > which[i - i]);
+
+	for (j = which[i]; j >= WELL_SPAWN; j--)
+	    well[j] = well[j - 1];
+    }
+}
+
+int
+main(int argc, char **argv)
+{
+    uint16_t well[WELL_SIZE];
+    uint16_t piece_counts[7];
+
+    struct termios raw;
+
+    tcgetattr(STDIN_FILENO, &raw);
+    raw.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+
+    srand(time(NULL));
+
+    game_init_well_state(well);
+
+    fputs("\x1b[?25l", stdout);
+
+    uint16_t x = 4;
+    uint16_t y = 0;
+    uint16_t rotation = 0;
+    uint16_t old_x = 0;
+    uint16_t old_y = 0xffff;
+    uint16_t old_rotation = 0;
+    uint16_t delay_reset = 20;
+    uint16_t delay = delay_reset;
+    uint16_t lines = 0;
+
+    const struct tetromino *piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+    const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+
+    memset(piece_counts, 0, sizeof(piece_counts));
+    piece_counts[piece - all_pieces]++;
+
+    draw_well_from_scratch(well, piece_counts, 0);
+
+    while (true) {
+	if (old_y == 0xffff) {
+	    draw_piece(piece, x, y, rotation);
+
+	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
+	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
+
+	    /* If the new piece cannot be placed, the well is full, and the
+	     * game is over.
+	     */
+	    if (!game_can_do(well, piece->f[rotation].mask, x, y))
+		break;
+	} else {
+	    erase_piece(piece, old_x, old_y, old_rotation);
+	    draw_piece(piece, x, y, rotation);
+	}
+
+	fflush(stdout);
+
+	struct timespec duration = { 0, 1000000000 / 60 };
+	nanosleep(&duration, NULL);
+
+	old_x = x;
+	old_y = y;
+	old_rotation = rotation;
+
+	int ret;
+	struct pollfd pfd = { STDIN_FILENO, POLLIN, 0 };
+
+	ret = poll(&pfd, 1, 1);
+	if (ret == -1)
+	    perror("poll");
+
+	if (ret > 0) {
+	    char c = 0;
+	    int r = read(0, &c, 1);
+
+	    switch (c) {
+	    case 'a':
+		if (x > 0)
+		    x--;
+		break;
+
+	    case 'd':
+		x++;
+		break;
+
+	    case 'q':
+		rotation = (rotation - 1) & 3;
+		break;
+
+	    case 'e':
+		rotation = (rotation + 1) & 3;
+		break;
+
+	    case 'r':
+		draw_well_from_scratch(well, piece_counts, lines);
+		break;
+	    }
+	}
+
+	if (x != old_x || y != old_y || rotation != old_rotation) {
+	    if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
+		x = old_x;
+		rotation = old_rotation;
+	    }
+	}
+
+	if (--delay == 0) {
+	    y++;
+
+	    if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
+		erase_piece(piece, old_x, old_y, old_rotation);
+		draw_piece(piece, x, y - 1, rotation);
+		game_set_piece(well, piece->f[rotation].mask, x, y - 1);
+		x = 4;
+		y = 0;
+		rotation = 0;
+		old_y = 0xffff;
+
+		uint16_t complete[4];
+		uint16_t count = game_check_complete_lines(well, complete);
+
+		if (count > 0) {
+		    draw_complete_lines(complete, count);
+		    fflush(stdout);
+		    sleep(2);
+		    game_remove_lines(well, complete, count);
+
+		    lines += count;
+		    draw_well_from_scratch(well, piece_counts, lines);
+		}
+
+		piece_counts[next_piece - all_pieces]++;
+
+		piece = next_piece;
+		next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+	    }
+
+	    delay = delay_reset;
+	}
+    }
+
+    fputs("\x1b[24;0f", stdout);
+    fputs("\x1b[?25h", stdout);
+    return 0;
+}
