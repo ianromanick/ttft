@@ -468,9 +468,6 @@ main(int argc, char **argv)
 
 		if (count > 0) {
 		    draw_complete_lines(complete, count);
-		    fflush(stdout);
-		    sleep(2);
-		    game_remove_lines(well, complete, count);
 
 		    lines += count;
 		    score += level * points_for_lines[2 * count + prev_was_tetris];
@@ -478,6 +475,10 @@ main(int argc, char **argv)
 
 		    draw_well_from_scratch(well, piece_counts, lines);
 		    draw_score(score, lines, level);
+
+		    fflush(stdout);
+		    sleep(2);
+		    game_remove_lines(well, complete, count);
 		}
 
 		piece_counts[next_piece - all_pieces]++;
