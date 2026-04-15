@@ -8,7 +8,6 @@ Still to be done:
 
 - As more lines are completed, the game should speed up.
 - As completed lines are removed, the graphics used for the remaining blocks should stay the same. The only data that is explicitly stored now is whether a block is occupied.
-- Add an input to drop the current piece. On terminals, there is only individual key press information. Without having independent key down / key up data, having an input that just makes it fall faster is not practical. The only plausible thing would be for a key to drop the piece all the way.
 - Provide modern "shuffle" RNG mode. Classis NES and Game Boy Tetris would select each tetromino at random with equal probability. This could lead to long bursts of the same piece in a row and long droughts of other pieces (seee below). Modern Tetris implementations instead shufle the 7 possible tetrominos. Once all 7 have been provided, they are shuffled again. This means that a particular piece can only occur twice in a row (i.e., when it is last in one shuffle and first in the next). It also means that there can be at most 12 pieces between occurances of any particular piece (i.e., when that piece is first in one shuffle and last in the next). If you've ever had 17 Z or S pieces while waiting for an I, you know how much less irritating this RNG mode is.
 - In classic RNG mode, a drought counter. When it has been more than 12 tetrominos since the last I, the game is in drought. Display the running tally.
 - Allow the RNG seed to be specified somehow.

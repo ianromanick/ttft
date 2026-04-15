@@ -406,6 +406,26 @@ main(int argc, char **argv)
 		x++;
 		break;
 
+	    case 's': {
+		uint16_t drop = 1;
+
+		while (game_can_do(well, piece->f[rotation].mask, x, y + drop))
+		    drop++;
+
+		if (--drop > 0) {
+		    /* Hard drops are 2 points per cell. */
+		    score += 2 * drop;
+
+		    /* FIXME: This doesn't actually set the piece. It won't
+		     * actually set until the delay expires. Perhaps this is
+		     * desirable?
+		     */
+		    y += drop;
+		}
+
+		break;
+	    }
+
 	    case 'q':
 		rotation = (rotation - 1) & 3;
 		break;
