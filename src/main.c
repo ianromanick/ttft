@@ -131,7 +131,7 @@ erase_piece(const struct tetromino *t,
 	   uint16_t x, uint16_t y, uint16_t rotation)
 {
     printf("\x1b[m\x1b(0");
-    move_to(22 + 2 * (x - t->f[rotation].shift), y);
+    move_to(22 + 2 * x, y);
     fwrite(t->f[rotation].erase, 1,
 	   strlen(t->f[rotation].erase), stdout);
     printf("\x1b[m\x1b(B");
@@ -142,7 +142,7 @@ draw_piece(const struct tetromino *t,
 	   uint16_t x, uint16_t y, uint16_t rotation)
 {
     printf("\x1b[7m\x1b(0");
-    move_to(22 + 2 * (x - t->f[rotation].shift), y);
+    move_to(22 + 2 * x, y);
     fwrite(t->f[rotation].draw, 1,
 	   strlen(t->f[rotation].draw), stdout);
     printf("\x1b[m\x1b(B");
@@ -426,13 +426,17 @@ main(int argc, char **argv)
 		break;
 	    }
 
-	    case 'q':
-		rotation = (rotation - 1) & 3;
-		break;
-
 	    case 'e':
-		rotation = (rotation + 1) & 3;
+	    case 'q': {
+		int16_t dir = c == 'e' ? 1 : -1;
+		int16_t delta;
+
+		rotation = (rotation + dir) & 3;
+
+		delta = piece->f[old_rotation].shift - piece->f[rotation].shift;
+		x = x >= delta ? x - delta : 0;
 		break;
+	    }
 
 	    case 'r':
 		draw_well_from_scratch(well, piece_counts, lines);

@@ -130,10 +130,18 @@ all_pieces = (('O', O),
               ('J', J),
               ('T', T))
 
+def get_shift_for_frame(f):
+    for i in range(4):
+        s = f[0][2 * i] + f[1][2 * i] + f[2][2 * i] + f[3][2 * i]
+
+        if s != '    ':
+            return i
+
+    return 0
+
 def generate_mask(t):
     piece_mask = []
     for frame in t:
-        all_mask = 0
         tmp = []
 
         for line in frame:
@@ -149,13 +157,9 @@ def generate_mask(t):
                 if c != ' ':
                     mask |= 0x1000
 
-            all_mask |= mask
             tmp.append(mask)
 
-        shift = 0
-        while all_mask & (0x8000 >> shift) == 0:
-            shift += 1
-
+        shift = get_shift_for_frame(frame)
         frame_mask = [shift]
         for x in tmp:
             frame_mask.append(x << shift)
@@ -173,6 +177,7 @@ def generate_draw(t, erase=False):
         # followed by one or more non-blank rows, etc.) and columns
         # (zero or more blank "pixels," etc.)
 
+        shift = 2 * get_shift_for_frame(frame)
         last_x = 1
         last_y = 1
         y = 1
@@ -183,7 +188,7 @@ def generate_draw(t, erase=False):
                 continue
 
             x = 1
-            for c in line:
+            for c in line[shift:]:
                 if y != last_y:
                     if c == " ":
                         x += 1
