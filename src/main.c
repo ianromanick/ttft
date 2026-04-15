@@ -58,7 +58,7 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
     uint16_t j;
     char border[2];
 
-    fputs("\x1b[2J\x1b[3;4f\x1b[7m\x1b(0", stdout);
+    fputs("\x1b[2J\x1b[3;20f\x1b[7m\x1b(0", stdout);
 
     border[0] = 'l';
     border[1] = 'k';
@@ -75,14 +75,31 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 	    }
 	}
 
-	printf("\x1b[7m%c%c\n\x1b[4G", border[0], border[1]);
+	printf("\x1b[7m%c%c\n\x1b[20G", border[0], border[1]);
 	border[0] = 'x';
 	border[1] = 'x';
     }
 
     fputs("mvqqqqqqqqqqqqqqqqqqqqvj\x1b(B", stdout);
 
-    fprintf(stdout, "\x1b[3;30f\x1b[7m\x1b(0");
+    fprintf(stdout, "\x1b[3f\x1b[7m\x1b(0");
+    fprintf(stdout, "lwqqqqqqqqqqqqwk\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m \x1b(BTop Score  \x1b(0\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m \x1b(BScore      \x1b(0\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m \x1b(BLines      \x1b(0\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m \x1b(BLevel      \x1b(0\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "mvqqqqqqqqqqqqvj\x1b(B");
+
+    fprintf(stdout, "\x1b[3;46f\x1b[7m\x1b(0");
     fprintf(stdout, "lwqq\x1b[m NEXT \x1b[7mqqwk\x1b[B\x1b[14D");
     fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
     fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
@@ -92,23 +109,9 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
     fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
     fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
 
-    fprintf(stdout, "\x1b[13;30f\x1b[7m\x1b(0");
-    fprintf(stdout, "lwq\x1b[m POINTS \x1b[7mqwk\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
-
-    fprintf(stdout, "\x1b[19;30f\x1b[7m\x1b(0");
-    fprintf(stdout, "lwq\x1b[m LINES  \x1b[7mqwk\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
-
-    fprintf(stdout, "\x1b[3;45f\x1b[0m\x1b)0");
+    fprintf(stdout, "\x1b[3;61f\x1b[0m\x1b)0");
     for (i = 0; i < 7; i++) {
-	printf("%c: %d\x1b[%d;45f", all_pieces[i].name,
+	printf("%c: %d\x1b[%d;61f", all_pieces[i].name,
 	       piece_counts[i], 4 + i);
     }
 }
@@ -128,7 +131,7 @@ erase_piece(const struct tetromino *t,
 	   uint16_t x, uint16_t y, uint16_t rotation)
 {
     printf("\x1b[m\x1b(0");
-    move_to(6 + 2 * (x - t->f[rotation].shift), y);
+    move_to(22 + 2 * (x - t->f[rotation].shift), y);
     fwrite(t->f[rotation].erase, 1,
 	   strlen(t->f[rotation].erase), stdout);
     printf("\x1b[m\x1b(B");
@@ -139,7 +142,7 @@ draw_piece(const struct tetromino *t,
 	   uint16_t x, uint16_t y, uint16_t rotation)
 {
     printf("\x1b[7m\x1b(0");
-    move_to(6 + 2 * (x - t->f[rotation].shift), y);
+    move_to(22 + 2 * (x - t->f[rotation].shift), y);
     fwrite(t->f[rotation].draw, 1,
 	   strlen(t->f[rotation].draw), stdout);
     printf("\x1b[m\x1b(B");
@@ -151,7 +154,7 @@ draw_complete_lines(const uint16_t *complete, uint16_t count)
     uint16_t i;
 
     for (i = 0; i < count; i++) {
-	printf("\x1b[%d;6f\x1b(0\x1b[5maaaaaaaaaaaaaaaaaaaa", complete[i]);
+	printf("\x1b[%d;22f\x1b(0\x1b[5maaaaaaaaaaaaaaaaaaaa", complete[i]);
     }
 }
 
