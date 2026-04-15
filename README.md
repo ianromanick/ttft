@@ -1,4 +1,4 @@
-Many years ago, I wrote an implementation of Tetris for VT100/VT220 terminals. I was inspired to write it after seeing John Tromp's [entry in the 1989 Internationsl Obfuscated C Code Contest](https://github.com/ioccc-src/winner/tree/master/1989/tromp) that implemented a fully playable version of VT100 Tetris.
+Many years ago, I wrote an implementation of Tetris for VT100/VT220 terminals. I was inspired to write it after seeing John Tromp's [entry in the 1989 International Obfuscated C Code Contest](https://github.com/ioccc-src/winner/tree/master/1989/tromp) that implemented a fully playable version of VT100 Tetris.
 
 I eventually ported the core mechanics of my VT220 Tetris to run on a 8051 microcontroller connected to a Sega Master System game pad and a VT220 terminal (with no keyboard) for a project at Portland State University. I believe this was in 1997. Unfortunately that hardware (both the terminal and the 8051 board) and source code are lost to time.
 
@@ -12,3 +12,4 @@ Still to be done:
 - In classic RNG mode, a drought counter. When it has been more than 12 tetrominos since the last I, the game is in drought. Display the running tally.
 - Allow the RNG seed to be specified somehow.
 - Two-player mode in the spirit of Game Boy Tetris. The intention would be to use more modern [garbage rules](https://tetris.fandom.com/wiki/Garbage).
+- Add a "Tetris rate" display.
