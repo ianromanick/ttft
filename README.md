@@ -6,7 +6,6 @@ After seeing some of Adrian Black's videos about the [Plexus P/20](https://youtu
 
 Still to be done:
 
-- Implement scoring.
 - As more lines are completed, the game should speed up.
 - As completed lines are removed, the graphics used for the remaining blocks should stay the same. The only data that is explicitly stored now is whether a block is occupied.
 - Add an input to drop the current piece. On terminals, there is only individual key press information. Without having independent key down / key up data, having an input that just makes it fall faster is not practical. The only plausible thing would be for a key to drop the piece all the way.

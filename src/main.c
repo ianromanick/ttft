@@ -158,6 +158,92 @@ draw_complete_lines(const uint16_t *complete, uint16_t count)
     }
 }
 
+static int
+format_number_u16(uint16_t n, char *s)
+{
+    /* 5 digits and one separator. The NUL is not stored here. */
+    char buf[5 + 1];
+    uint16_t i = 0;
+    uint16_t k = 0;
+
+    /* Generate the characters of the string in reverse order. */
+    do {
+	if (k == 3) {
+	    buf[i++] = ',';
+	    k = 0;
+	}
+
+	buf[i++] = '0' + (n % 10);
+	n /= 10;
+	k++;
+    } while(n > 0);
+
+    /* Reverse the string from the local buffer to the caller's
+     * buffer.
+     */
+    k = 0;
+    do {
+	s[k] = buf[i - 1 - k];
+	k++;
+    } while(k < i);
+
+    s[k++] = '\0';
+    return k;
+}
+
+static int
+format_number_u32(uint32_t n, char *s)
+{
+    /* 10 digits and 3 separators. The NUL is not stored here. */
+    char buf[10 + 3];
+    uint16_t i = 0;
+    uint16_t k = 0;
+
+    /* Generate the characters of the string in reverse order. */
+    do {
+	if (k == 3) {
+	    buf[i++] = ',';
+	    k = 0;
+	}
+
+	buf[i++] = '0' + (n % 10);
+	n /= 10;
+	k++;
+    } while(n > 0);
+
+    /* Reverse the string from the local buffer to the caller's
+     * buffer.
+     */
+    k = 0;
+    do {
+	s[k] = buf[i - (k + 1)];
+	k++;
+    } while(k < i);
+
+    s[k++] = '\0';
+    return k;
+}
+
+static void
+draw_score(uint32_t score, uint16_t lines, uint16_t level)
+{
+    /* 10 digits, 3 separators, and a NUL. */
+    char buf[10 + 3 + 1];
+    int len;
+
+    len = format_number_u32(score, buf);
+    fprintf(stdout, "\x1b[m\x1b[9;%df", (3 + 2 + 10) - len);
+    fwrite(buf, 1, len - 1, stdout);
+
+    len = format_number_u16(lines, buf);
+    fprintf(stdout, "\x1b[12;%df", (3 + 2 + 10) - len);
+    fwrite(buf, 1, len - 1, stdout);
+
+    len = format_number_u16(level, buf);
+    fprintf(stdout, "\x1b[15;%df", (3 + 2 + 10) - len);
+    fwrite(buf, 1, len - 1, stdout);
+}
+
 static void
 game_init_well_state(uint16_t *well)
 {
@@ -225,6 +311,14 @@ game_remove_lines(uint16_t * well, const uint16_t *which, uint16_t count)
     }
 }
 
+/* This is mostly the "guideline scoring system." T-spins are not detected, so
+ * extra points are not awarded for those. Access as "(number of lines * 2) +
+ * previous was Tetris."
+ */
+static const uint16_t points_for_lines[] = {
+    0, 0, 100, 100, 300, 300, 500, 500, 800, 1200
+};
+
 int
 main(int argc, char **argv)
 {
@@ -252,6 +346,9 @@ main(int argc, char **argv)
     uint16_t delay_reset = 20;
     uint16_t delay = delay_reset;
     uint16_t lines = 0;
+    uint16_t level = 1;
+    uint32_t score = 0;
+    bool prev_was_tetris = false;
 
     const struct tetromino *piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
     const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
@@ -260,6 +357,7 @@ main(int argc, char **argv)
     piece_counts[piece - all_pieces]++;
 
     draw_well_from_scratch(well, piece_counts, 0);
+    draw_score(score, lines, level);
 
     while (true) {
 	if (old_y == 0xffff) {
@@ -351,7 +449,11 @@ main(int argc, char **argv)
 		    game_remove_lines(well, complete, count);
 
 		    lines += count;
+		    score += level * points_for_lines[2 * count + prev_was_tetris];
+		    prev_was_tetris = count == 4;
+
 		    draw_well_from_scratch(well, piece_counts, lines);
+		    draw_score(score, lines, level);
 		}
 
 		piece_counts[next_piece - all_pieces]++;
