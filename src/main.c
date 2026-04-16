@@ -58,7 +58,7 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
     uint16_t j;
     char border[2];
 
-    fputs("\x1b[2J\x1b[3;20f\x1b[7m\x1b(0", stdout);
+    fputs("\x1b[3;20f\x1b[7m\x1b(0", stdout);
 
     border[0] = 'l';
     border[1] = 'k';
@@ -84,19 +84,19 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 
     fprintf(stdout, "\x1b[3f\x1b[7m\x1b(0");
     fprintf(stdout, "lwqqqqqqqqqqqqwk\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
     fprintf(stdout, "xx\x1b[m \x1b(BTop Score  \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
     fprintf(stdout, "xx\x1b[m \x1b(BScore      \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
     fprintf(stdout, "xx\x1b[m \x1b(BLines      \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
     fprintf(stdout, "xx\x1b[m \x1b(BLevel      \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m            \x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
+    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
     fprintf(stdout, "mvqqqqqqqqqqqqvj\x1b(B");
 
     fprintf(stdout, "\x1b[3;46f\x1b[7m\x1b(0");
@@ -335,7 +335,8 @@ main(int argc, char **argv)
 
     game_init_well_state(well);
 
-    fputs("\x1b[?25l", stdout);
+    /* Cursor off, clear screen. */
+    fputs("\x1b[?25l\x1b[2J", stdout);
 
     uint16_t x = 4;
     uint16_t y = 0;
@@ -473,12 +474,12 @@ main(int argc, char **argv)
 		    score += level * points_for_lines[2 * count + prev_was_tetris];
 		    prev_was_tetris = count == 4;
 
-		    draw_well_from_scratch(well, piece_counts, lines);
 		    draw_score(score, lines, level);
 
 		    fflush(stdout);
 		    sleep(2);
 		    game_remove_lines(well, complete, count);
+		    draw_well_from_scratch(well, piece_counts, lines);
 		}
 
 		piece_counts[next_piece - all_pieces]++;
