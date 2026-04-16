@@ -359,8 +359,11 @@ main(int argc, char **argv)
 
     draw_well_from_scratch(well, piece_counts, 0);
     draw_score(score, lines, level);
+    draw_piece(piece, x, y, rotation);
 
     while (true) {
+	int need_new_piece;
+
 	if (old_y == 0xffff) {
 	    draw_piece(piece, x, y, rotation);
 
@@ -372,9 +375,6 @@ main(int argc, char **argv)
 	     */
 	    if (!game_can_do(well, piece->f[rotation].mask, x, y))
 		break;
-	} else {
-	    erase_piece(piece, old_x, old_y, old_rotation);
-	    draw_piece(piece, x, y, rotation);
 	}
 
 	fflush(stdout);
@@ -452,43 +452,51 @@ main(int argc, char **argv)
 	    }
 	}
 
+	need_new_piece = 0;
 	if (--delay == 0) {
 	    y++;
+	    delay = delay_reset;
 
 	    if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
-		erase_piece(piece, old_x, old_y, old_rotation);
-		draw_piece(piece, x, y - 1, rotation);
-		game_set_piece(well, piece->f[rotation].mask, x, y - 1);
-		x = 4;
-		y = 0;
-		rotation = 0;
-		old_y = 0xffff;
+		y--;
+		need_new_piece = 1;
+	    }
+	}
 
-		uint16_t complete[4];
-		uint16_t count = game_check_complete_lines(well, complete);
+	if (x != old_x || y != old_y || rotation != old_rotation) {
+	    erase_piece(piece, old_x, old_y, old_rotation);
+	    draw_piece(piece, x, y, rotation);
+	}
 
-		if (count > 0) {
-		    draw_complete_lines(complete, count);
+	if (need_new_piece) {
+	    game_set_piece(well, piece->f[rotation].mask, x, y);
+	    x = 4;
+	    y = 0;
+	    rotation = 0;
+	    old_y = 0xffff;
 
-		    lines += count;
-		    score += level * points_for_lines[2 * count + prev_was_tetris];
-		    prev_was_tetris = count == 4;
+	    uint16_t complete[4];
+	    uint16_t count = game_check_complete_lines(well, complete);
 
-		    draw_score(score, lines, level);
+	    if (count > 0) {
+		draw_complete_lines(complete, count);
 
-		    fflush(stdout);
-		    sleep(2);
-		    game_remove_lines(well, complete, count);
-		    draw_well_from_scratch(well, piece_counts, lines);
-		}
+		lines += count;
+		score += level * points_for_lines[2 * count + prev_was_tetris];
+		prev_was_tetris = count == 4;
 
-		piece_counts[next_piece - all_pieces]++;
+		draw_score(score, lines, level);
 
-		piece = next_piece;
-		next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+		fflush(stdout);
+		sleep(2);
+		game_remove_lines(well, complete, count);
+		draw_well_from_scratch(well, piece_counts, lines);
 	    }
 
-	    delay = delay_reset;
+	    piece_counts[next_piece - all_pieces]++;
+
+	    piece = next_piece;
+	    next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
 	}
     }
 
