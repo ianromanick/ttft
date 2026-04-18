@@ -330,6 +330,20 @@ game_remove_lines(uint16_t * well, const uint16_t *which, uint16_t count)
     }
 }
 
+#if defined linux
+static void
+tick_sleep(uint16_t t)
+{
+    uint16_t x = t % 60;
+    struct timespec duration = { t / 60, 0 };
+
+    if (x != 0)
+	duration.tv_nsec = 1000000000 / (60 / x);
+
+    nanosleep(&duration, NULL);
+}
+#endif
+
 /* This is mostly the "guideline scoring system." T-spins are not detected, so
  * extra points are not awarded for those. Access as "(number of lines * 2) +
  * previous was Tetris."
@@ -398,9 +412,7 @@ main(int argc, char **argv)
 	}
 
 	fflush(stdout);
-
-	struct timespec duration = { 0, 1000000000 / 60 };
-	nanosleep(&duration, NULL);
+	tick_sleep(1);
 
 	old_x = x;
 	old_y = y;
@@ -508,7 +520,7 @@ main(int argc, char **argv)
 		draw_score(score, lines, level);
 
 		fflush(stdout);
-		sleep(2);
+		tick_sleep(120);
 		game_remove_lines(well, complete, count);
 		draw_well_from_scratch(well, piece_counts, lines);
 	    }
