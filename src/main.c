@@ -117,6 +117,25 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 }
 
 static void
+draw_controls(void)
+{
+    fprintf(stdout,
+	    "\x1b[13;46f"
+	    "\x1b[14;46f rotate              rotate"
+	    "\x1b[15;46f counter            clockwise"
+	    "\x1b[16;46fclockwise          /"
+	    "\x1b[17;46f          \\       /"
+	    "\x1b[18;46f           q     e"
+	    "\x1b[19;46f           a  s  d"
+	    "\x1b[20;46f          /   |   \\"
+	    "\x1b[21;46f      move    |    move"
+	    "\x1b[22;46f     left     |     right"
+	    "\x1b[23;46f            hard"
+	    "\x1b[24;46f            drop"
+	    "\x1b[3;61f\x1b[0m\x1b)0");
+}
+
+static void
 move_to(uint16_t x, uint16_t y)
 {
     if (y == 0) {
@@ -358,6 +377,7 @@ main(int argc, char **argv)
     piece_counts[piece - all_pieces]++;
 
     draw_well_from_scratch(well, piece_counts, 0);
+    draw_controls();
     draw_score(score, lines, level);
     draw_piece(piece, x, y, rotation);
 
