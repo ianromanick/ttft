@@ -75,7 +75,7 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 	    }
 	}
 
-	printf("\x1b[7m%c%c\n\x1b[20G", border[0], border[1]);
+	printf("\x1b[7m%c%c\n\x1b[19C", border[0], border[1]);
 	border[0] = 'x';
 	border[1] = 'x';
     }
