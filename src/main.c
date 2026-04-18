@@ -412,6 +412,7 @@ main(int argc, char **argv)
 
 	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
 	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
+	    fflush(stdout);
 
 	    /* If the new piece cannot be placed, the well is full, and the
 	     * game is over.
@@ -420,7 +421,6 @@ main(int argc, char **argv)
 		break;
 	}
 
-	fflush(stdout);
 	tick_sleep(ticks_to_sleep);
 
 	old_x = x;
@@ -482,6 +482,7 @@ main(int argc, char **argv)
 
 	    case 'r':
 		draw_well_from_scratch(well, piece_counts, lines);
+		fflush(stdout);
 		break;
 	    }
 	}
@@ -507,6 +508,7 @@ main(int argc, char **argv)
 	if (x != old_x || y != old_y || rotation != old_rotation) {
 	    erase_piece(piece, old_x, old_y, old_rotation);
 	    draw_piece(piece, x, y, rotation);
+	    fflush(stdout);
 	}
 
 	if (need_new_piece) {
@@ -544,6 +546,7 @@ main(int argc, char **argv)
 		tick_sleep(120);
 		game_remove_lines(well, complete, count);
 		draw_well_from_scratch(well, piece_counts, lines);
+		fflush(stdout);
 	    }
 
 	    piece_counts[next_piece - all_pieces]++;
