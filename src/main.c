@@ -11,7 +11,12 @@
 #include <unistd.h>
 #include <poll.h>
 #include <termios.h>
+#include <fcntl.h>
 #include <assert.h>
+
+#ifdef linux
+#define HAVE_DUP2
+#endif
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -352,21 +357,45 @@ static const uint16_t points_for_lines[] = {
     0, 0, 100, 100, 300, 300, 500, 500, 800, 1200
 };
 
+static void
+init_file_io()
+{
+    int fd;
+    struct termios raw;
+
+    fd = open("/dev/tty", O_RDWR | O_NDELAY);
+    if (fd == -1) {
+        perror("opening TTY");
+        exit(1);
+    }
+
+    tcgetattr(fd, &raw);
+    raw.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(fd, TCSAFLUSH, &raw);
+
+#ifdef HAVE_DUP2
+    dup2(0, fd);
+    dup2(1, fd);
+#else
+    close(0);
+    dup(fd);
+
+    close(1);
+    dup(fd);
+#endif
+}
+
 int
 main(int argc, char **argv)
 {
     uint16_t well[WELL_SIZE];
     uint16_t piece_counts[7];
 
-    struct termios raw;
-
-    tcgetattr(STDIN_FILENO, &raw);
-    raw.c_lflag &= ~(ECHO | ICANON);
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-
     srand(time(NULL));
 
     game_init_well_state(well);
+
+    init_file_io();
 
     /* Cursor off, clear screen. */
     fputs("\x1b[?25l\x1b[2J", stdout);
@@ -427,17 +456,8 @@ main(int argc, char **argv)
 	old_y = y;
 	old_rotation = rotation;
 
-	int ret;
-	struct pollfd pfd = { STDIN_FILENO, POLLIN, 0 };
-
-	ret = poll(&pfd, 1, 1);
-	if (ret == -1)
-	    perror("poll");
-
-	if (ret > 0) {
-	    char c = 0;
-	    int r = read(0, &c, 1);
-
+        char c = 0;
+	if (read(0, &c, 1) > 0) {
 	    switch (c) {
 	    case 'a':
 		if (x > 0)
