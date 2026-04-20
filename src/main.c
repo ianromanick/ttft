@@ -58,6 +58,16 @@ struct tetromino {
 
 #include "tetrominos.h"
 
+struct garbage_state {
+    uint16_t garbage;
+    int16_t remain;
+};
+
+/* After this number of rows of garbage have been added, a new garbage
+ * column is selected.
+ */
+#define GARBAGE_CHANGE_COUNT 9
+
 static void
 draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 		       uint16_t lines)
@@ -338,6 +348,28 @@ game_remove_lines(uint16_t * well, const uint16_t *which, uint16_t count)
     }
 }
 
+static void
+game_insert_garbage(uint16_t *well, uint16_t count, struct garbage_state *state)
+{
+    uint16_t i;
+
+    /* Move the stack up by count lines. */
+    for (i = 0; i < (WELL_SIZE - WELL_GUARD_BAND) - count; i++)
+	well[i] = well[i + count];
+
+    for (/* empty */; i < (WELL_SIZE - WELL_GUARD_BAND); i++) {
+	if (--state->remain < 0) {
+	    /* Select a new garbage column. */
+	    state->garbage = ~((uint16_t)0x8000u >> (rand() % 10));
+
+	    /* Reset the counter. */
+	    state->remain = GARBAGE_CHANGE_COUNT - 1;
+	}
+
+	well[i] = state->garbage;
+    }
+}
+
 #if defined linux
 static void
 tick_sleep(uint16_t t)
@@ -358,6 +390,14 @@ tick_sleep(uint16_t t)
  */
 static const uint16_t points_for_lines[] = {
     0, 0, 100, 100, 300, 300, 500, 500, 800, 1200
+};
+
+/* Back-to-back bonus is +1 lines of garbage. This bonus should also be awarded
+ * for T-spin clears. Perfect clears, which are not currently tracked, should be
+ * 10 lines of garbage (total) regardless of the clear count or bonus situation.
+ */
+static const uint16_t garbage_for_lines[] = {
+    0, 0, 0, 0, 1, 1, 2, 2, 4, 5
 };
 
 static void
@@ -599,6 +639,10 @@ main(int argc, char **argv)
 {
     uint16_t well[WELL_SIZE];
     uint16_t piece_counts[7];
+    struct garbage_state gs;
+
+    gs.garbage = 0;
+    gs.remain = 0;
 
     srand(time(NULL));
 
@@ -626,6 +670,7 @@ main(int argc, char **argv)
     uint32_t other_score = 0;
     bool other_game_over = false;
     bool prev_was_tetris = false;
+    uint16_t garbage_lines = 0;
 
     int16_t lines_next_level = 10;
     /* We want the speed ups at 4, 7, 9, and 13. */
@@ -756,12 +801,13 @@ main(int argc, char **argv)
 
 	    uint16_t complete[4];
 	    uint16_t count = game_check_complete_lines(well, complete);
+            uint16_t idx = 2 * count + prev_was_tetris;
 
-	    if (count > 0) {
+            if (count > 0) {
 		draw_complete_lines(complete, count);
 
 		lines += count;
-		score += level * points_for_lines[2 * count + prev_was_tetris];
+		score += level * points_for_lines[idx];
 		prev_was_tetris = count == 4;
 
 		lines_next_level -= count;
@@ -788,7 +834,7 @@ main(int argc, char **argv)
             tm.msg_type = SEND_SCORE;
             tm.qid = my_qid;
             tm.msg_data[0] = score;
-            tm.msg_data[1] = 0;
+            tm.msg_data[1] = garbage_for_lines[idx];
 
             if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
                 perror("msgsnd - my score update");
@@ -814,6 +860,7 @@ main(int argc, char **argv)
                         /* Only score increases should be received. */
                         if (tm.msg_data[0] > other_score && !other_game_over) {
                             other_score = tm.msg_data[0];
+                            garbage_lines += tm.msg_data[1];
                         }
                     } else if (tm.msg_type == MY_GAME_OVER) {
                         other_game_over = true;
@@ -825,6 +872,12 @@ main(int argc, char **argv)
 
 	    piece = next_piece;
 	    next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+
+	    if (garbage_lines > 0) {
+		game_insert_garbage(well, garbage_lines, &gs);
+		draw_well_from_scratch(well, piece_counts, lines);
+		garbage_lines = 0;
+	    }
 	}
     }
 
