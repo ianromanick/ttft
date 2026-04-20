@@ -12,6 +12,9 @@
 #include <poll.h>
 #include <termios.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <sys/msg.h>
+#include <sys/stat.h>
 #include <assert.h>
 
 #ifdef linux
@@ -385,6 +388,212 @@ init_file_io()
 #endif
 }
 
+enum tetris_message_types {
+    SET_RNG_SEED = 1,
+    SET_INITIAL_LEVEL,
+    READY_TO_PLAY,
+    SEND_SCORE,
+    MY_GAME_OVER,
+};
+
+struct tetris_message {
+    long msg_type;
+    int qid;
+    uint32_t msg_data[2];
+};
+
+int my_qid = -1;
+int other_qid = -1;
+
+static const char *msg_file = "/tmp/tetris-xxx";
+
+static void
+exit_handler()
+{
+    msgctl(my_qid, IPC_RMID, NULL);
+    unlink(msg_file);
+}
+
+static int
+connect_to_other_game()
+{
+    int ret;
+    key_t k;
+    struct tetris_message tm;
+
+    umask(0);
+
+#define PERM (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
+
+    ret = creat(msg_file, PERM);
+    if (ret < 0 && errno != EEXIST) {
+        perror("Create tetris-a");
+        exit(1);
+    }
+
+    k = ftok(msg_file, 'a');
+    if (k < 0) {
+        perror("ftok tetris-a");
+        exit(1);
+    }
+
+    /* Try first to be the server. */
+    my_qid = msgget(k, IPC_CREAT | IPC_EXCL | PERM);
+    if (my_qid < 0) {
+        if (errno != EEXIST) {
+            perror("msgget");
+            exit(1);
+        }
+
+        printf("Connecting to server...\n");
+        /* Fall back to being the client. */
+        my_qid = msgget(IPC_PRIVATE, PERM);
+        if (my_qid < 0) {
+            perror("msgget - client");
+            exit(1);
+        }
+
+        /* Connect to server. */
+        other_qid = msgget(k, PERM);
+        if (other_qid < 0) {
+            perror("msgget - server");
+            exit(1);
+        }
+
+        printf("other qid = %d\n", other_qid);
+
+        /* Tell server who we are. */
+        tm.msg_type = SET_RNG_SEED;
+        tm.qid = my_qid;
+        tm.msg_data[0] = time(NULL);
+
+        srand(tm.msg_data[0]);
+
+        if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
+            perror("msgsnd - RNG seed");
+            exit(1);
+        }
+
+        printf("Waiting for initial level from server...\n");
+        if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0) == -1) {
+            perror("msgrcv - client waiting for initial level");
+            exit(1);
+        }
+
+        if (tm.qid != other_qid) {
+            printf("Expected queue ID %d, got %d\n",
+                   other_qid, tm.qid);
+            exit(1);
+        }
+
+        if (tm.msg_type != SET_INITIAL_LEVEL) {
+            printf("Expected SET_INITIAL_LEVEL (%d), got %ld\n",
+                   SET_INITIAL_LEVEL, tm.msg_type);
+            exit(1);
+        }
+
+        printf("Starting Tetris in 3...");
+        fflush(stdout);
+        sleep(1);
+        printf("2...");
+        fflush(stdout);
+        sleep(1);
+        printf("1...");
+        fflush(stdout);
+        sleep(1);
+
+        tm.msg_type = READY_TO_PLAY;
+        tm.qid = my_qid;
+
+        if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
+            perror("msgsnd - ready to play");
+            exit(1);
+        }
+
+        if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0) == -1) {
+            perror("msgrcv - client waiting for ready to play");
+            exit(1);
+        }
+
+        if (tm.qid != other_qid) {
+            printf("Expected queue ID %d, got %d\n",
+                   other_qid, tm.qid);
+            exit(1);
+        }
+
+        if (tm.msg_type != READY_TO_PLAY) {
+            printf("Expected READY_TO_PLAY (%d), got %ld\n",
+                   READY_TO_PLAY, tm.msg_type);
+            exit(1);
+        }
+    } else {
+        atexit(exit_handler);
+
+        printf("Waiting for RNG seed from client...\n");
+        if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0) == -1) {
+            perror("msgrcv - server waiting for RNG seed");
+            exit(1);
+        }
+
+        if (tm.msg_type != SET_RNG_SEED) {
+            printf("Expected SET_RNG_SEED (%d), got %ld\n",
+                   SET_RNG_SEED, tm.msg_type);
+            exit(1);
+        }
+
+        other_qid = tm.qid;
+
+        srand(tm.msg_data[0]);
+
+        printf("Sending initial level to client...\n");
+        tm.msg_type = SET_INITIAL_LEVEL;
+        tm.qid = my_qid;
+        tm.msg_data[0] = 1;
+
+        if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
+            perror("msgsnd - initial level");
+            exit(1);
+        }
+
+        printf("Starting Tetris in 3...");
+        fflush(stdout);
+        sleep(1);
+        printf("2...");
+        fflush(stdout);
+        sleep(1);
+        printf("1...");
+        fflush(stdout);
+        sleep(1);
+
+        tm.msg_type = READY_TO_PLAY;
+        tm.qid = my_qid;
+
+        if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
+            perror("msgsnd - ready to play");
+            exit(1);
+        }
+
+        if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0) == -1) {
+            perror("msgrcv - client waiting for ready to play");
+            exit(1);
+        }
+
+        if (tm.qid != other_qid) {
+            printf("Expected queue ID %d, got %d\n",
+                   other_qid, tm.qid);
+            exit(1);
+        }
+
+        if (tm.msg_type != READY_TO_PLAY) {
+            printf("Expected READY_TO_PLAY (%d), got %ld\n",
+                   READY_TO_PLAY, tm.msg_type);
+            exit(1);
+        }
+    }
+
+    return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -392,6 +601,8 @@ main(int argc, char **argv)
     uint16_t piece_counts[7];
 
     srand(time(NULL));
+
+    connect_to_other_game();
 
     game_init_well_state(well);
 
@@ -410,7 +621,10 @@ main(int argc, char **argv)
     uint16_t delay = delay_reset;
     uint16_t lines = 0;
     uint16_t level = 1;
+    uint32_t old_score = 0;
     uint32_t score = 0;
+    uint32_t other_score = 0;
+    bool other_game_over = false;
     bool prev_was_tetris = false;
 
     int16_t lines_next_level = 10;
@@ -424,6 +638,7 @@ main(int argc, char **argv)
 
     const struct tetromino *piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
     const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+    struct tetris_message tm;
 
     memset(piece_counts, 0, sizeof(piece_counts));
     piece_counts[piece - all_pieces]++;
@@ -455,6 +670,7 @@ main(int argc, char **argv)
 	old_x = x;
 	old_y = y;
 	old_rotation = rotation;
+        old_score = score;
 
         char c = 0;
 	if (read(0, &c, 1) > 0) {
@@ -569,6 +785,42 @@ main(int argc, char **argv)
 		fflush(stdout);
 	    }
 
+            tm.msg_type = SEND_SCORE;
+            tm.qid = my_qid;
+            tm.msg_data[0] = score;
+            tm.msg_data[1] = 0;
+
+            if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
+                perror("msgsnd - my score update");
+                exit(1);
+            }
+
+            do {
+                if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, IPC_NOWAIT) == -1) {
+                    if (errno != ENOMSG) {
+                        perror("msgrcv - their score update");
+                        exit(1);
+                    }
+
+                    break;
+                }
+
+                /* Messages should only be received from the established other
+                 * player. If a message is somehow received from elsewhere, it
+                 * is dropped.
+                 */
+                if (tm.qid == other_qid) {
+                    if (tm.msg_type == SEND_SCORE) {
+                        /* Only score increases should be received. */
+                        if (tm.msg_data[0] > other_score && !other_game_over) {
+                            other_score = tm.msg_data[0];
+                        }
+                    } else if (tm.msg_type == MY_GAME_OVER) {
+                        other_game_over = true;
+                    }
+                }
+            } while (true);
+
 	    piece_counts[next_piece - all_pieces]++;
 
 	    piece = next_piece;
@@ -576,7 +828,62 @@ main(int argc, char **argv)
 	}
     }
 
+    tm.msg_type = MY_GAME_OVER;
+    tm.qid = my_qid;
+    tm.msg_data[0] = score;
+    tm.msg_data[1] = 0;
+
+    for (unsigned j = 0; j < 10; j++) {
+        if (msgsnd(other_qid, &tm, sizeof(tm) - sizeof(long), 0) == -1) {
+            perror("msgsnd - my game over");
+            exit(1);
+        }
+    }
+
     fputs("\x1b[24;0f", stdout);
     fputs("\x1b[?25h", stdout);
+
+    while (!other_game_over) {
+        printf("Waiting for other game to end...\n");
+
+        do {
+            if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0) == -1) {
+                if (errno != ENOMSG) {
+                    perror("msgrcv - their score update");
+                    exit(1);
+                }
+
+                break;
+            }
+
+            /* Messages should only be received from the established other
+             * player. If a message is somehow received from elsewhere, it is
+             * dropped.
+             */
+            if (tm.qid == other_qid) {
+                if (tm.msg_type == SEND_SCORE) {
+                    /* Only score increases should be received. */
+                    if (tm.msg_data[0] > other_score && !other_game_over) {
+                        other_score = tm.msg_data[0];
+                        printf("    score = %d\n", other_score);
+                    }
+                } else if (tm.msg_type == MY_GAME_OVER) {
+                    other_game_over = true;
+                    break;
+                }
+            }
+        } while (true);
+    }
+
+    if (other_score > score) {
+        printf("Other player %d versus your %d. You lost.\n",
+               other_score, score);
+    } else if (other_score < score) {
+        printf("Your %d versus other player %d. You win.\n",
+               score, other_score);
+    } else {
+        printf("Both scores %d. Tie game.\n", score);
+    }
+
     return 0;
 }
