@@ -374,8 +374,8 @@ init_file_io()
     tcsetattr(fd, TCSAFLUSH, &raw);
 
 #ifdef HAVE_DUP2
-    dup2(0, fd);
-    dup2(1, fd);
+    dup2(fd, 0);
+    dup2(fd, 1);
 #else
     close(0);
     dup(fd);
