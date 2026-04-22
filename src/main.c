@@ -392,8 +392,8 @@ init_file_io()
 #endif
 }
 
-int
-main(int argc, char **argv)
+static void
+play_game()
 {
     uint16_t well[WELL_SIZE];
     uint16_t piece_counts[7];
@@ -401,8 +401,6 @@ main(int argc, char **argv)
     srand(time(NULL));
 
     game_init_well_state(well);
-
-    init_file_io();
 
     /* Cursor off, clear screen. */
     fputs("\x1b[?25l\x1b[2J", stdout);
@@ -577,6 +575,16 @@ main(int argc, char **argv)
 	    next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
 	}
     }
+
+    return;
+}
+
+int
+main(int argc, char **argv)
+{
+    init_file_io();
+
+    play_game();
 
     fputs("\x1b[24;0f", stdout);
     fputs("\x1b[?25h", stdout);
