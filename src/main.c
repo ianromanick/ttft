@@ -392,6 +392,32 @@ init_file_io()
 #endif
 }
 
+static int
+do_title_screen()
+{
+    /* Cursor off, clear screen. */
+    fputs("\x1b[?25l\x1b[2J", stdout);
+    move_to(40 - (23 / 2), 10);
+    printf("Terminal Tetris for Two");
+    move_to(40 - (42 / 2), 11);
+    printf("Press Q to quit, or any other key to play.");
+    fflush(stdout);
+
+    while (true) {
+        char c = 0;
+	if (read(0, &c, 1) > 0) {
+            if (c == 'q' || c == 'Q')
+                return 1;
+
+            return 0;
+        }
+
+        sleep(1);
+    }
+
+    return 0;
+}
+
 static void
 play_game()
 {
@@ -584,7 +610,12 @@ main(int argc, char **argv)
 {
     init_file_io();
 
-    play_game();
+    while (true) {
+        if (do_title_screen() == 1)
+            break;
+
+        play_game();
+    }
 
     fputs("\x1b[24;0f", stdout);
     fputs("\x1b[?25h", stdout);
