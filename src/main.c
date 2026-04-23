@@ -55,6 +55,12 @@ struct tetromino {
 
 #include "tetrominos.h"
 
+struct game_mode {
+    uint16_t initial_level;
+    uint16_t num_players;
+    uint16_t rng_mode;
+};
+
 static void
 draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 		       uint16_t lines)
@@ -418,8 +424,246 @@ do_title_screen()
     return 0;
 }
 
+struct widget {
+    int8_t x, y;
+    /* Up, right, down, left. */
+    int8_t move[4];
+    bool selected, highlighted;
+    const char *text;
+};
+
+struct widget level_widgets[] = {
+    { 42, 4, {  0,  1,  5,  0 }, true,  true,  "0" },
+    { 48, 4, {  0,  1,  5, -1 }, false, false, "1" },
+    { 54, 4, {  0,  1,  5, -1 }, false, false, "2" },
+    { 60, 4, {  0,  1,  5, -1 }, false, false, "3" },
+    { 66, 4, {  0,  0,  5, -1 }, false, false, "4" },
+    { 42, 7, { -5,  1,  0, -1 }, false, false, "5" },
+    { 48, 7, { -5,  1,  0, -1 }, false, false, "6" },
+    { 54, 7, { -5,  1,  0, -1 }, false, false, "7" },
+    { 60, 7, { -5,  1,  0, -1 }, false, false, "8" },
+    { 66, 7, { -5,  0,  0, -1 }, false, false, "9" },
+    {  1, 4, {  1,  1,  1,  1 }, false, false, "            Initial level of play" },
+    { -1, },
+};
+
+struct widget players_widgets[] = {
+    {  1, 11, {  1,  1,  1,  1 }, false, false, "   # of players (not implemented)" },
+    { 42, 11, {  0,  1,  0,  0 }, true,  false, "1 Player" },
+    { 59, 11, {  0,  0,  0, -1 }, false, false, "2 Player" },
+    { -1, },
+};
+
+struct widget rng_widgets[] = {
+    { 42, 15, {  0,  1,  0,  0 }, true,  false, "Classic RNG" },
+    { 56, 15, {  0,  0,  0, -1 }, false, false, "Shuffle RNG" },
+    {  1, 15, {  1,  1,  1,  1 }, false, false, "Piece selection (not implemented)" },
+    { -1, },
+};
+
+struct widget start_widgets[] = {
+    { 29, 19, {  0,  1,  0,  0 }, true,  false, "Start" },
+    { 42, 19, {  0,  0,  0, -1 }, false, false, "Return to title" },
+    { -1, },
+};
+
 static void
-play_game()
+draw_widget(const struct widget *w)
+{
+    uint16_t len = strlen(w->text);
+
+    move_to(w->x, w->y);
+
+    fputs(w->highlighted ? "\x1b[7m" : "\x1b[0m", stdout);
+    for (uint16_t i = 0; i < len + 4; i++) {
+        putchar(' ');
+    }
+
+    move_to(w->x, w->y + 1);
+    putchar(' ');
+    putchar(' ');
+
+    if (w->selected != w->highlighted)
+        fputs(w->selected ? "\x1b[7m" : "\x1b[0m", stdout);
+
+    fputs(w->text, stdout);
+
+    if (w->selected != w->highlighted)
+        fputs(w->highlighted ? "\x1b[7m" : "\x1b[0m", stdout);
+
+    putchar(' ');
+    putchar(' ');
+
+    move_to(w->x, w->y + 2);
+
+    for (uint16_t i = 0; i < len + 4; i++) {
+        putchar(' ');
+    }
+}
+
+static void
+draw_widgets(const struct widget *w)
+{
+    for (uint16_t i = 0; w[i].x >= 0; i++)
+        draw_widget(&w[i]);
+}
+
+static void
+clear_highlighted(struct widget *w)
+{
+    for (uint16_t i = 0; w[i].x >= 0; i++)
+        w[i].highlighted = false;
+}
+
+static void
+copy_selected_to_highlighted(struct widget *w)
+{
+    for (uint16_t i = 0; w[i].x >= 0; i++)
+        w[i].highlighted = w[i].selected;
+}
+
+static int16_t
+get_highlighted(struct widget *w)
+{
+    for (uint16_t i = 0; w[i].x >= 0; i++)
+        if (w[i].highlighted)
+            return i;
+
+    return -1;
+}
+
+static int16_t
+get_selected(struct widget *w)
+{
+    for (uint16_t i = 0; w[i].x >= 0; i++)
+        if (w[i].selected)
+            return i;
+
+    return -1;
+}
+
+static bool
+do_menu_screen(struct game_mode *mode)
+{
+    static struct widget *menus[] = {
+        level_widgets,
+        players_widgets,
+        rng_widgets,
+        start_widgets,
+    };
+    uint16_t m = 0;
+
+    /* Cursor off, clear screen. */
+    fputs("\x1b[?25l\x1b[2J", stdout);
+
+    move_to(2, 2);
+    printf("W-A-S-D to navigate a menu. Enter to select. Tab to skip.");
+
+    copy_selected_to_highlighted(level_widgets);
+    clear_highlighted(players_widgets);
+    clear_highlighted(rng_widgets);
+    clear_highlighted(start_widgets);
+
+    draw_widgets(level_widgets);
+    draw_widgets(players_widgets);
+    draw_widgets(rng_widgets);
+    draw_widgets(start_widgets);
+
+    fflush(stdout);
+
+    while (m < ARRAY_SIZE(menus)) {
+        int16_t h = get_highlighted(menus[m]);
+        int16_t old_h = h;
+        int16_t s = get_selected(menus[m]);
+        int16_t old_s = s;
+        uint16_t old_m = m;
+        char c = 0;
+        bool redraw = false;
+
+	if (read(0, &c, 1) > 0) {
+            switch (c) {
+            case 'w':
+                menus[m][h].highlighted = false;
+                h += menus[m][h].move[0];
+                menus[m][h].highlighted = true;
+                redraw = true;
+                break;
+            case 'a':
+                menus[m][h].highlighted = false;
+                h += menus[m][h].move[3];
+                menus[m][h].highlighted = true;
+                redraw = true;
+                break;
+            case 's':
+                menus[m][h].highlighted = false;
+                h += menus[m][h].move[2];
+                menus[m][h].highlighted = true;
+                redraw = true;
+                break;
+            case 'd':
+                menus[m][h].highlighted = false;
+                h += menus[m][h].move[1];
+                menus[m][h].highlighted = true;
+                redraw = true;
+                break;
+            case '\t':
+                menus[m][h].highlighted = false;
+                redraw = true;
+                m++;
+                break;
+            case '\n':
+            case '\r':
+            case ' ':
+                s = h;
+
+                if (old_s >= 0)
+                    menus[m][old_s].selected = false;
+
+                menus[m][s].selected = true;
+                menus[m][s].highlighted = false;
+                m++;
+
+                redraw = true;
+                break;
+            }
+
+            if (redraw) {
+                draw_widget(&menus[old_m][old_h]);
+                draw_widget(&menus[old_m][h]);
+                draw_widget(&menus[old_m][old_s]);
+                draw_widget(&menus[old_m][s]);
+
+                if (m != old_m && m < ARRAY_SIZE(menus)) {
+                    copy_selected_to_highlighted(menus[m]);
+                    draw_widget(&menus[m][get_highlighted(menus[m])]);
+                }
+
+                fflush(stdout);
+            }
+        }
+
+        tick_sleep(1);
+    }
+
+    mode->initial_level = get_selected(level_widgets);
+    mode->num_players = get_selected(players_widgets);
+    mode->rng_mode = get_selected(rng_widgets);
+
+    return get_selected(start_widgets) <= 0;
+}
+
+enum game_state {
+    normal,
+    drop_one,
+    hard_drop,
+    lock_piece,
+    clearing_lines,
+    spawn_piece,
+    game_over,
+};
+
+static void
+play_game(uint16_t initial_level)
 {
     uint16_t well[WELL_SIZE];
     uint16_t piece_counts[7];
@@ -437,14 +681,14 @@ play_game()
     uint16_t old_x = 0;
     uint16_t old_y = 0xffff;
     uint16_t old_rotation = 0;
-    uint16_t level = 1;
+    uint16_t level = initial_level;
     uint16_t delay_reset = delay_for_level[level];
     uint16_t delay = delay_reset;
     uint16_t lines = 0;
     uint32_t score = 0;
     bool prev_was_tetris = false;
 
-    int16_t lines_next_level = 10;
+    int16_t lines_next_level = 10 * (level + 1);
 
     const struct tetromino *piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
     const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
@@ -614,7 +858,9 @@ main(int argc, char **argv)
         if (do_title_screen() == 1)
             break;
 
-        play_game();
+        struct game_mode mode;
+        if (do_menu_screen(&mode))
+            play_game(mode.initial_level);
     }
 
     fputs("\x1b[24;0f", stdout);
