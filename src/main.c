@@ -357,6 +357,13 @@ static const uint16_t points_for_lines[] = {
     0, 0, 100, 100, 300, 300, 500, 500, 800, 1200
 };
 
+static const uint16_t delay_for_level[] = {
+/*   0   1   2   3   4   5   6   7   8   9 */
+    48, 43, 38, 33, 28, 23, 18, 13,  8,  6,
+     5,  5,  5,  4,  4,  4,  3,  3,  3,  2,
+     2,  2,  2,  2,  2,  2,  2,  2,  2,  1,
+};
+
 static void
 init_file_io()
 {
@@ -406,21 +413,14 @@ main(int argc, char **argv)
     uint16_t old_x = 0;
     uint16_t old_y = 0xffff;
     uint16_t old_rotation = 0;
-    uint16_t delay_reset = 20;
+    uint16_t level = 1;
+    uint16_t delay_reset = delay_for_level[level];
     uint16_t delay = delay_reset;
     uint16_t lines = 0;
-    uint16_t level = 1;
     uint32_t score = 0;
     bool prev_was_tetris = false;
 
     int16_t lines_next_level = 10;
-    /* We want the speed ups at 4, 7, 9, and 13. */
-    uint16_t levels_next_speedup = 3;
-
-    /* At level 13 this will become 0, and the game will likely be too
-     * fast to play.
-     */
-    uint16_t ticks_to_sleep = 4;
 
     const struct tetromino *piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
     const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
@@ -450,7 +450,7 @@ main(int argc, char **argv)
 		break;
 	}
 
-	tick_sleep(ticks_to_sleep);
+	tick_sleep(1);
 
 	old_x = x;
 	old_y = y;
@@ -553,12 +553,14 @@ main(int argc, char **argv)
 		    lines_next_level += 10;
 
 		    level++;
-		    levels_next_speedup--;
 
-		    if (levels_next_speedup == 0) {
-			levels_next_speedup = 5;
-		    }
-		}
+                    if (level >= ARRAY_SIZE(delay_for_level))
+                        delay_reset = delay_for_level[ARRAY_SIZE(delay_for_level) - 1];
+                    else
+                        delay_reset = delay_for_level[level];
+
+                    delay = delay_reset;
+                }
 
 		draw_score(score, lines, level);
 
