@@ -655,6 +655,10 @@ do_menu_screen(struct game_mode *mode)
 enum game_state {
     normal,
     drop_one,
+
+    /* Hard drop state must appear before states where the hard drop input is
+     * ignored.
+     */
     hard_drop,
     lock_piece,
     clearing_lines,
@@ -690,8 +694,11 @@ play_game(uint16_t initial_level)
 
     int16_t lines_next_level = 10 * (level + 1);
 
-    const struct tetromino *piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+    uint16_t complete[4];
+    uint16_t complete_count;
+
     const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+    const struct tetromino *piece = next_piece;
 
     memset(piece_counts, 0, sizeof(piece_counts));
     piece_counts[piece - all_pieces]++;
@@ -701,25 +708,8 @@ play_game(uint16_t initial_level)
     draw_score(score, lines, level);
     draw_piece(piece, x, y, rotation);
 
-    while (true) {
-	int need_new_piece;
-
-	if (old_y == 0xffff) {
-	    draw_piece(piece, x, y, rotation);
-
-	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
-	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
-	    fflush(stdout);
-
-	    /* If the new piece cannot be placed, the well is full, and the
-	     * game is over.
-	     */
-	    if (!game_can_do(well, piece->f[rotation].mask, x, y))
-		break;
-	}
-
-	tick_sleep(1);
-
+    enum game_state state = spawn_piece;
+    while (state != game_over) {
 	old_x = x;
 	old_y = y;
 	old_rotation = rotation;
@@ -737,21 +727,8 @@ play_game(uint16_t initial_level)
 		break;
 
 	    case 's': {
-		uint16_t drop = 1;
-
-		while (game_can_do(well, piece->f[rotation].mask, x, y + drop))
-		    drop++;
-
-		if (--drop > 0) {
-		    /* Hard drops are 2 points per cell. */
-		    score += 2 * drop;
-
-		    /* FIXME: This doesn't actually set the piece. It won't
-		     * actually set until the delay expires. Perhaps this is
-		     * desirable?
-		     */
-		    y += drop;
-		}
+                if (state < hard_drop)
+                    state = hard_drop;
 
 		break;
 	    }
@@ -775,48 +752,52 @@ play_game(uint16_t initial_level)
 	    }
 	}
 
-	if (x != old_x || y != old_y || rotation != old_rotation) {
-	    if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
-		x = old_x;
-		rotation = old_rotation;
-	    }
-	}
+        delay--;
 
-	need_new_piece = 0;
-	if (--delay == 0) {
-	    y++;
-	    delay = delay_reset;
+        bool redraw_piece = false;
+        bool redraw_score = false;
 
-	    if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
-		y--;
-		need_new_piece = 1;
-	    }
-	}
+        switch (state) {
+        case normal:
+        case drop_one:
+            if (x != old_x || rotation != old_rotation) {
+                if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
+                    x = old_x;
+                    rotation = old_rotation;
+                }
 
-	if (x != old_x || y != old_y || rotation != old_rotation) {
-	    erase_piece(piece, old_x, old_y, old_rotation);
-	    draw_piece(piece, x, y, rotation);
-	    fflush(stdout);
-	}
+                redraw_piece = true;
+            }
 
-	if (need_new_piece) {
-	    game_set_piece(well, piece->f[rotation].mask, x, y);
-	    x = 4;
-	    y = 0;
-	    rotation = 0;
-	    old_y = 0xffff;
+            if (state == drop_one) {
+                if (!game_can_do(well, piece->f[rotation].mask, x, ++y)) {
+                    y--;
+                    state = lock_piece;
+                } else {
+                    redraw_piece = true;
+                    state = normal;
+                    delay = delay_reset;
+                }
+            } else if (delay == 0) {
+                state = drop_one;
+            }
+            break;
 
-	    uint16_t complete[4];
-	    uint16_t count = game_check_complete_lines(well, complete);
+        case lock_piece: {
+            /* old_x and old_rotation are used to ignore lateral movement or
+             * rotation while locking. This state will immediately transition to a differnt
+             */
+	    game_set_piece(well, piece->f[old_rotation].mask, old_x, y);
 
-	    if (count > 0) {
-		draw_complete_lines(complete, count);
+	    complete_count = game_check_complete_lines(well, complete);
+	    if (complete_count > 0) {
+		draw_complete_lines(complete, complete_count);
 
-		lines += count;
-		score += level * points_for_lines[2 * count + prev_was_tetris];
-		prev_was_tetris = count == 4;
+		lines += complete_count;
+		score += level * points_for_lines[2 * complete_count + prev_was_tetris];
+		prev_was_tetris = complete_count == 4;
 
-		lines_next_level -= count;
+		lines_next_level -= complete_count;
 		if (lines_next_level <= 0) {
 		    lines_next_level += 10;
 
@@ -826,24 +807,95 @@ play_game(uint16_t initial_level)
                         delay_reset = delay_for_level[ARRAY_SIZE(delay_for_level) - 1];
                     else
                         delay_reset = delay_for_level[level];
-
-                    delay = delay_reset;
                 }
 
-		draw_score(score, lines, level);
+                delay = 120;
+                state = clearing_lines;
+                redraw_score = true;
+	    } else {
+                state = spawn_piece;
+            }
+            break;
+        }
 
-		fflush(stdout);
-		tick_sleep(120);
-		game_remove_lines(well, complete, count);
+        case hard_drop:
+            /* Ignore lateral movement or rotation during hard drop. */
+            x = old_x;
+            rotation = old_rotation;
+
+            /* Similar to drop_one except the game stays in this state until
+             * transitioning to lock_piece. Also accumulate points along the
+             * way.
+             */
+            score += 2;
+	    if (!game_can_do(well, piece->f[rotation].mask, x, ++y)) {
+                score -= 2;
+		y--;
+                state = lock_piece;
+            } else {
+                redraw_piece = true;
+            }
+
+            redraw_score = true;
+            break;
+
+        case clearing_lines:
+            if (delay == 0) {
+		game_remove_lines(well, complete, complete_count);
 		draw_well_from_scratch(well, piece_counts, lines);
-		fflush(stdout);
-	    }
 
+                state = spawn_piece;
+                redraw_score = true;
+            }
+            break;
+
+        case spawn_piece:
 	    piece_counts[next_piece - all_pieces]++;
 
+	    x = 4;
+	    y = 0;
+            old_x = x;
+	    rotation = 0;
+
+            old_x = x;
+            old_y = y;
+            old_rotation = rotation;
+
 	    piece = next_piece;
+
 	    next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+
+	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
+	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
+
+            delay = delay_reset;
+            state = normal;
+            redraw_piece = true;
+
+	    /* If the new piece cannot be placed, the well is full, and the
+	     * game is over.
+	     */
+	    if (!game_can_do(well, piece->f[rotation].mask, x, y))
+                state = game_over;
+
+            break;
+
+        case game_over:
+            break;
+        }
+
+        if (redraw_score)
+            draw_score(score, lines, level);
+
+	if (redraw_piece) {
+	    erase_piece(piece, old_x, old_y, old_rotation);
+	    draw_piece(piece, x, y, rotation);
 	}
+
+        if (redraw_score || redraw_piece)
+            fflush(stdout);
+
+	tick_sleep(1);
     }
 
     return;
