@@ -652,6 +652,46 @@ do_menu_screen(struct game_mode *mode)
     return get_selected(start_widgets) <= 0;
 }
 
+struct rng_state {
+    uint8_t prev;
+    uint8_t curr;
+};
+
+static void
+rng_state_init(struct rng_state *s)
+{
+    /* Tetrominos are numbered [0, 6]. For the initial state, select different
+     * invalid numbers for curr and prev.
+     */
+    s->prev = 7;
+    s->curr = 8;
+}
+
+static const struct tetromino *
+select_piece(struct rng_state *s)
+{
+    uint8_t rng = (rand() >> 8) % 7;
+
+    /* According to https://harddrop.com/wiki/Tetris_(Game_Boy)#Randomizer, the
+     * goal of the Game Boy Tetris randomizer was to prevent getting the same
+     * piece 3 times in a row. Maintain the spirit of the algorithm without
+     * duplicating all of the details.
+     */
+    if (s->prev == s->curr) {
+        if (s->curr == rng) {
+            rng = (rand() >> 8) % 7;
+
+            if (s->curr == rng) {
+                rng = (rand() >> 8) % 7;
+            }
+        }
+    }
+
+    s->prev = s->curr;
+    s->curr = rng;
+    return &all_pieces[rng];
+}
+
 enum game_state {
     normal,
     drop_one,
@@ -673,6 +713,10 @@ play_game(uint16_t initial_level)
     uint16_t piece_counts[7];
 
     srand(time(NULL));
+
+    struct rng_state rngs;
+
+    rng_state_init(&rngs);
 
     game_init_well_state(well);
 
@@ -697,7 +741,7 @@ play_game(uint16_t initial_level)
     uint16_t complete[4];
     uint16_t complete_count;
 
-    const struct tetromino *next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+    const struct tetromino *next_piece = select_piece(&rngs);
     const struct tetromino *piece = next_piece;
 
     memset(piece_counts, 0, sizeof(piece_counts));
@@ -863,7 +907,7 @@ play_game(uint16_t initial_level)
 
 	    piece = next_piece;
 
-	    next_piece = &all_pieces[rand() % ARRAY_SIZE(all_pieces)];
+	    next_piece = select_piece(&rngs);
 
 	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
 	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
