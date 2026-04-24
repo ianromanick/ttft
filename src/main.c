@@ -703,6 +703,8 @@ enum game_state {
     lock_piece,
     clearing_lines,
     spawn_piece,
+    close_window,
+    waiting_game_over,
     game_over,
 };
 
@@ -919,9 +921,38 @@ play_game(uint16_t initial_level)
 	    /* If the new piece cannot be placed, the well is full, and the
 	     * game is over.
 	     */
-	    if (!game_can_do(well, piece->f[rotation].mask, x, y))
-                state = game_over;
+	    if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
+                delay = 1;
+                y = 3;
+                state = close_window;
+            }
 
+            break;
+
+        case close_window:
+            y = old_y;
+
+            if (delay <= 0) {
+                if (y < 23) {
+                    move_to(22, y);
+                    printf("====================");
+                    fflush(stdout);
+
+                    delay = 7;
+                    y++;
+                } else {
+                    move_to(22, 13);
+                    printf("Press a key to exit.");
+                    fflush(stdout);
+
+                    state = waiting_game_over;
+                }
+            }
+            break;
+
+        case waiting_game_over:
+            if (c != 0)
+                state = game_over;
             break;
 
         case game_over:
