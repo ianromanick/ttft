@@ -855,7 +855,7 @@ play_game(uint16_t initial_level)
                         delay_reset = delay_for_level[level];
                 }
 
-                delay = 120;
+                delay = 20;
                 state = clearing_lines;
                 redraw_score = true;
 	    } else {
