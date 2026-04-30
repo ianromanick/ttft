@@ -86,7 +86,11 @@ connect_to_other_game(uint16_t *seed)
 
     umask(0);
 
+#ifdef S_IRUSR
 #define PERM (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
+#else
+#define PERM 0666
+#endif
 
     ret = creat(msg_file, PERM);
     if (ret < 0 && errno != EEXIST) {
