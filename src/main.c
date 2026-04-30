@@ -473,7 +473,7 @@ game_insert_garbage(uint16_t *well, uint16_t count, struct garbage_state *state)
        if (--state->remain < 0) {
            /* Select a new garbage column. */
            state->garbage =
-               ~((uint16_t)0x8000u >> (lfsr_galois(&state->seed) % 10));
+               ~((uint16_t)0x8000u >> (lfsr_galois(&state->seed) % 10u));
 
            /* Reset the counter. */
            state->remain = GARBAGE_CHANGE_COUNT - 1;
@@ -905,7 +905,7 @@ rng_state_init(struct rng_state *s, uint16_t seed)
 static const struct tetromino *
 select_piece(struct rng_state *s)
 {
-    uint8_t rng = (lfsr_galois(&s->seed) >> 8) % 7;
+    uint8_t rng = (lfsr_galois(&s->seed) >> 8) % 7u;
 
     /* According to https://harddrop.com/wiki/Tetris_(Game_Boy)#Randomizer, the
      * goal of the Game Boy Tetris randomizer was to prevent getting the same
@@ -914,10 +914,10 @@ select_piece(struct rng_state *s)
      */
     if (s->prev == s->curr) {
         if (s->curr == rng) {
-            rng = (lfsr_galois(&s->seed) >> 8) % 7;
+            rng = (lfsr_galois(&s->seed) >> 8) % 7u;
 
             if (s->curr == rng) {
-                rng = (lfsr_galois(&s->seed) >> 8) % 7;
+                rng = (lfsr_galois(&s->seed) >> 8) % 7u;
             }
         }
     }
