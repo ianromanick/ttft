@@ -41,7 +41,7 @@
 #define WELL_SIZE (20 + WELL_SPAWN + WELL_GUARD_BAND)
 
 struct tetromino_frame {
-    unsigned shift;
+    uint16_t shift;
     uint16_t mask[4];
     const char *draw;
     const char *erase;
