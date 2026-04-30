@@ -86,38 +86,34 @@ move_to(uint16_t x, uint16_t y)
     }
 }
 
+static const char q80[] =
+    "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+
+static const char spc80[] =
+    "                                                                                ";
+
 static void
 draw_box(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     uint16_t i;
-    uint16_t j;
 
     printf("\x1b(0\x1b[7m");
 
     move_to(x, y);
     printf("lw");
-
-    for (i = 4; i < w; i++)
-        putchar('q');
-
+    fwrite(q80, 1, w - 4, stdout);
     printf("wk");
 
     for (i = 2; i < h; i++) {
         move_to(x, y + i - 1);
         printf("xx\x1b[0m");
-
-        for (j = 4; j < w; j++)
-            putchar(' ');
-
+        fwrite(spc80, 1, w - 4, stdout);
         printf("\x1b[7mxx");
     }
 
     move_to(x, y + h - 1);
     printf("wv");
-
-    for (i = 4; i < w; i++)
-        putchar('q');
-
+    fwrite(q80, 1, w - 4, stdout);
     printf("vj\x1b[0m");
 }
 
@@ -347,8 +343,7 @@ draw_final_scores(uint32_t my_score, uint32_t their_score, bool all_done)
     move_to(22, 10);
 
     len = format_number_u32(their_score, buf);
-    for (uint16_t i = 0; i < (20 - len); i++)
-        putchar(' ');
+    fwrite(spc80, 1, 20 - len, stdout);
 
     printf(buf);
     putchar(' ');
@@ -358,8 +353,7 @@ draw_final_scores(uint32_t my_score, uint32_t their_score, bool all_done)
     move_to(22, 13);
 
     len = format_number_u32(my_score, buf);
-    for (uint16_t i = 0; i < (20 - len); i++)
-        putchar(' ');
+    fwrite(spc80, 1, 20 - len, stdout);
 
     printf(buf);
     putchar(' ');
@@ -631,13 +625,10 @@ draw_widget(const struct widget *w)
     move_to(w->x, w->y);
 
     fputs(w->highlighted ? "\x1b[7m" : "\x1b[0m", stdout);
-    for (uint16_t i = 0; i < len + 4; i++) {
-        putchar(' ');
-    }
+    fwrite(spc80, 1, len + 4, stdout);
 
     move_to(w->x, w->y + 1);
-    putchar(' ');
-    putchar(' ');
+    fwrite(spc80, 1, 2, stdout);
 
     if (w->selected != w->highlighted)
         fputs(w->selected ? "\x1b[7m" : "\x1b[0m", stdout);
@@ -647,14 +638,11 @@ draw_widget(const struct widget *w)
     if (w->selected != w->highlighted)
         fputs(w->highlighted ? "\x1b[7m" : "\x1b[0m", stdout);
 
-    putchar(' ');
-    putchar(' ');
+    fwrite(spc80, 1, 2, stdout);
 
     move_to(w->x, w->y + 2);
 
-    for (uint16_t i = 0; i < len + 4; i++) {
-        putchar(' ');
-    }
+    fwrite(spc80, 1, len + 4, stdout);
 }
 
 static void
