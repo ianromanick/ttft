@@ -2,24 +2,31 @@
  * Copyright © 2026 Ian D. Romanick
  * SPDX-License-Identifier: GPL-3.0-only
  */
-#include <stdio.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <poll.h>
+#endif
+
 #include <termios.h>
+
+#ifdef linux
+#include <time.h>
+#endif
+
+#include <stdio.h>
+#include <string.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <sys/times.h>
 
 #include "two_player.h"
-
-#ifdef linux
-#define HAVE_DUP2
-#endif
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define MAX2(a, b) ((a) > (b) ? (a) : (b))

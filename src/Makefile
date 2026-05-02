@@ -1,7 +1,7 @@
 all: ttft
 
 CC = gcc
-CFLAGS = -O -ggdb3 -Wall
+CFLAGS = -O -ggdb3 -Wall -DHAVE_DUP2 -DHAVE_UNISTD_H -DHAVE_STDINT_H -DHAVE_STDLIB_H
 
 OBJS = main.o two_player.o
 
