@@ -6,8 +6,7 @@
 #ifndef TWO_PLAYER_H
 #define TWO_PLAYER_H
 
-#include <stdint.h>
-#include "my_bool.h"
+#include "my_int.h"
 
 /* Message type identifiers.
  *

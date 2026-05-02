@@ -6,10 +6,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -30,6 +26,7 @@
 #include <assert.h>
 #include <sys/times.h>
 
+#include "my_bool.h"
 #include "two_player.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
