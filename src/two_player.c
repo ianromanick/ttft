@@ -95,7 +95,9 @@ connect_to_other_game(uint16_t *seed)
     struct tetris_message tm;
 
     umask(0);
+#ifdef HAVE_ATEXIT
     atexit(fully_disconnect);
+#endif
 
 #ifdef S_IRUSR
 #define PERM (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
