@@ -678,28 +678,36 @@ draw_widget(const struct widget *w)
 static void
 draw_widgets(const struct widget *w)
 {
-    for (uint16_t i = 0; w[i].x >= 0; i++)
+    uint16_t i;
+
+    for (i = 0; w[i].x >= 0; i++)
         draw_widget(&w[i]);
 }
 
 static void
 clear_highlighted(struct widget *w)
 {
-    for (uint16_t i = 0; w[i].x >= 0; i++)
+    uint16_t i;
+
+    for (i = 0; w[i].x >= 0; i++)
         w[i].highlighted = false;
 }
 
 static void
 copy_selected_to_highlighted(struct widget *w)
 {
-    for (uint16_t i = 0; w[i].x >= 0; i++)
+    uint16_t i;
+
+    for (i = 0; w[i].x >= 0; i++)
         w[i].highlighted = w[i].selected;
 }
 
 static int16_t
 get_highlighted(struct widget *w)
 {
-    for (uint16_t i = 0; w[i].x >= 0; i++)
+    uint16_t i;
+
+    for (i = 0; w[i].x >= 0; i++)
         if (w[i].highlighted)
             return i;
 
@@ -709,7 +717,9 @@ get_highlighted(struct widget *w)
 static int16_t
 get_selected(struct widget *w)
 {
-    for (uint16_t i = 0; w[i].x >= 0; i++)
+    uint16_t i;
+
+    for (i = 0; w[i].x >= 0; i++)
         if (w[i].selected)
             return i;
 
@@ -830,6 +840,10 @@ static int
 do_two_player_screen(uint16_t *seed)
 {
     const int box_x = 40 - (46 / 2);
+    struct tetris_message tm;
+    bool i_am_ready = false;
+    bool they_are_ready = false;
+    uint16_t i;
 
     draw_box(box_x, 7, 46, 7);
 
@@ -849,11 +863,6 @@ do_two_player_screen(uint16_t *seed)
     move_to(box_x + 3, 10);
     printf("Press any key when ready to play.");
     fflush(stdout);
-
-    struct tetris_message tm;
-    bool i_am_ready = false;
-    bool they_are_ready = false;
-    uint16_t i;
 
     for (i = 0; i < 1800; i++) {
         char c;
@@ -980,19 +989,7 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
     uint16_t well[WELL_SIZE];
     uint16_t piece_counts[7];
     struct garbage_state gs;
-
-    gs.garbage = 0;
-    gs.remain = 0;
-    gs.seed = seed;
-
     struct rng_state rngs;
-
-    rng_state_init(&rngs, seed);
-
-    game_init_well_state(well);
-
-    /* Cursor off, clear screen. */
-    fputs("\x1b[?25l\x1b[2J", stdout);
 
     uint16_t x = 4;
     uint16_t y = 0;
@@ -1017,8 +1014,23 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
     uint16_t complete[4];
     uint16_t complete_count;
 
-    const struct tetromino *next_piece = select_piece(&rngs);
-    const struct tetromino *piece = next_piece;
+    const struct tetromino *next_piece;
+    const struct tetromino *piece;
+    enum game_state state;
+
+    gs.garbage = 0;
+    gs.remain = 0;
+    gs.seed = seed;
+
+    rng_state_init(&rngs, seed);
+
+    game_init_well_state(well);
+
+    /* Cursor off, clear screen. */
+    fputs("\x1b[?25l\x1b[2J", stdout);
+
+    next_piece = select_piece(&rngs);
+    piece = next_piece;
 
     memset(piece_counts, 0, sizeof(piece_counts));
     piece_counts[piece - all_pieces]++;
@@ -1028,13 +1040,17 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
     draw_score(score, score, lines, level);
     draw_piece(piece, x, y, rotation);
 
-    enum game_state state = spawn_piece;
+    state = spawn_piece;
     while (state != game_over) {
+        bool redraw_piece = false;
+        bool redraw_score = false;
+        struct tetris_message tm;
+        char c = 0;
+
 	old_x = x;
 	old_y = y;
 	old_rotation = rotation;
 
-        char c = 0;
 	if (read(0, &c, 1) > 0) {
 	    switch (c) {
 	    case 'a':
@@ -1073,9 +1089,6 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
 	}
 
         delay--;
-
-        bool redraw_piece = false;
-        bool redraw_score = false;
 
         switch (state) {
         case normal:
@@ -1260,7 +1273,6 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
             break;
         }
 
-        struct tetris_message tm;
         if (poll_message(&tm) > 0) {
             if (tm.msg_type == SEND_SCORE) {
                 /* FINISHME: Some protocol robustness is in order here.
@@ -1312,10 +1324,11 @@ main(int argc, char **argv)
     init_file_io();
 
     while (true) {
+        struct game_mode mode;
+
         if (do_title_screen() == 1)
             break;
 
-        struct game_mode mode;
         if (do_menu_screen(&mode)) {
             struct tms t;
             uint16_t seed = times(&t);
