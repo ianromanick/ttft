@@ -51,11 +51,13 @@ struct tetris_message {
     uint32_t msg_data[2];
 };
 
+#if 0
 extern int connect_to_other_game(uint16_t *seed);
 extern void fully_disconnect(void);
 extern int send_ready(void);
 extern int send_game_over(uint32_t score);
 extern int send_score(uint32_t score, uint16_t garbage_lines);
 extern int poll_message(struct tetris_message *tm);
+#endif
 
 #endif /* TWO_PLAYER_H */

@@ -28,7 +28,7 @@
 
 static int my_qid = -1;
 static int other_qid = -1;
-static const char *msg_file = "/tmp/tetris-xxx";
+static char *msg_file = "/tmp/tetris-xxx";
 
 void
 fully_disconnect()
@@ -40,7 +40,8 @@ fully_disconnect()
 }
 
 int
-poll_message(struct tetris_message *tm)
+poll_message(tm)
+     struct tetris_message *tm;
 {
     if (msgrcv(my_qid, tm, sizeof(*tm) - sizeof(long), 0, IPC_NOWAIT) == -1)
         return -1;
@@ -49,7 +50,7 @@ poll_message(struct tetris_message *tm)
 }
 
 int
-send_ready(void)
+send_ready()
 {
     struct tetris_message tm;
 
@@ -62,7 +63,8 @@ send_ready(void)
 }
 
 int
-send_game_over(uint32_t score)
+send_game_over(score)
+    uint32_t score;
 {
     struct tetris_message tm;
 
@@ -75,7 +77,9 @@ send_game_over(uint32_t score)
 }
 
 int
-send_score(uint32_t score, uint16_t garbage_lines)
+send_score(score, garbage_lines)
+     uint32_t score;
+     uint16_t garbage_lines;
 {
     struct tetris_message tm;
 
@@ -88,7 +92,8 @@ send_score(uint32_t score, uint16_t garbage_lines)
 }
 
 int
-connect_to_other_game(uint16_t *seed)
+connect_to_other_game(seed)
+    uint16_t *seed;
 {
     int ret;
     key_t k;

@@ -51,8 +51,8 @@
 struct tetromino_frame {
     uint16_t shift;
     uint16_t mask[4];
-    const char *draw;
-    const char *erase;
+    char *draw;
+    char *erase;
 };
 
 struct tetromino {
@@ -85,7 +85,9 @@ struct game_mode {
 };
 
 static void
-move_to(uint16_t x, uint16_t y)
+move_to(x, y)
+     uint16_t x;
+     uint16_t y;
 {
     if (y == 0) {
 	printf("\033[;%df", x);
@@ -94,14 +96,18 @@ move_to(uint16_t x, uint16_t y)
     }
 }
 
-static const char q80[] =
+static char q80[] =
     "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
 
-static const char spc80[] =
+static char spc80[] =
     "                                                                                ";
 
 static void
-draw_box(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+draw_box(x, y, w, h)
+     uint16_t x;
+     uint16_t y;
+     uint16_t w;
+     uint16_t h;
 {
     uint16_t i;
 
@@ -126,8 +132,10 @@ draw_box(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 }
 
 static void
-draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
-		       uint16_t lines)
+draw_well_from_scratch(well, piece_counts, lines)
+     uint16_t *well;
+     uint16_t *piece_counts;
+     uint16_t lines;
 {
     uint16_t i;
     uint16_t j;
@@ -141,7 +149,7 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 	printf("\033[7m%c%c\033[m", border[0], border[1]);
 
 	for (j = 15; j > 5; j--) {
-	    const uint16_t bit = 1u << j;
+	    uint16_t bit = 1u << j;
 
 	    if ((well[i] & bit) != 0) {
 		printf("aa");
@@ -192,7 +200,7 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 }
 
 static void
-draw_controls(void)
+draw_controls()
 {
     fprintf(stdout,
 	    "\033[13;46f"
@@ -211,8 +219,11 @@ draw_controls(void)
 }
 
 static void
-erase_piece(const struct tetromino *t,
-	   uint16_t x, uint16_t y, uint16_t rotation)
+erase_piece(t, x, y, rotation)
+     struct tetromino *t;
+     uint16_t x;
+     uint16_t y;
+     uint16_t rotation;
 {
     printf("\033[m\033(0");
     move_to(22 + 2 * x, y);
@@ -222,8 +233,11 @@ erase_piece(const struct tetromino *t,
 }
 
 static void
-draw_piece(const struct tetromino *t,
-	   uint16_t x, uint16_t y, uint16_t rotation)
+draw_piece(t, x, y, rotation)
+     struct tetromino *t;
+     uint16_t x;
+     uint16_t y;
+     uint16_t rotation;
 {
     printf("\033[7m\033(0");
     move_to(22 + 2 * x, y);
@@ -233,7 +247,9 @@ draw_piece(const struct tetromino *t,
 }
 
 static void
-draw_complete_lines(const uint16_t *complete, uint16_t count)
+draw_complete_lines(complete, count)
+     uint16_t *complete;
+     uint16_t count;
 {
     uint16_t i;
 
@@ -243,7 +259,9 @@ draw_complete_lines(const uint16_t *complete, uint16_t count)
 }
 
 static int
-format_number_u16(uint16_t n, char *s)
+format_number_u16(n, s)
+     uint16_t n;
+     char *s;
 {
     /* 5 digits and one separator. The NUL is not stored here. */
     char buf[5 + 1];
@@ -276,7 +294,9 @@ format_number_u16(uint16_t n, char *s)
 }
 
 static int
-format_number_u32(uint32_t n, char *s)
+format_number_u32(n, s)
+     uint32_t n;
+     char *s;
 {
     /* 10 digits and 3 separators. The NUL is not stored here. */
     char buf[10 + 3];
@@ -309,7 +329,11 @@ format_number_u32(uint32_t n, char *s)
 }
 
 static void
-draw_score(uint32_t score, uint32_t top_score, uint16_t lines, uint16_t level)
+draw_score(score, top_score, lines, level)
+     uint32_t score;
+     uint32_t top_score;
+     uint16_t lines;
+     uint16_t level;
 {
     /* 10 digits, 3 separators, and a NUL. */
     char buf[10 + 3 + 1];
@@ -333,7 +357,10 @@ draw_score(uint32_t score, uint32_t top_score, uint16_t lines, uint16_t level)
 }
 
 static void
-draw_final_scores(uint32_t my_score, uint32_t their_score, bool all_done)
+draw_final_scores(my_score, their_score, all_done)
+     uint32_t my_score;
+     uint32_t their_score;
+     bool all_done;
 {
     /* 10 digits, 3 separators, and a NUL. */
     char buf[10 + 3 + 1];
@@ -387,7 +414,8 @@ draw_final_scores(uint32_t my_score, uint32_t their_score, bool all_done)
  * https://en.wikipedia.org/wiki/Linear-feedback_shift_register
  */
 static uint16_t
-lfsr_galois(uint16_t *seed)
+lfsr_galois(seed)
+     uint16_t *seed;
 {
     uint16_t lfsr = *seed;
     uint16_t msb = lfsr & 0x8000;
@@ -402,7 +430,8 @@ lfsr_galois(uint16_t *seed)
 }
 
 static void
-game_init_well_state(uint16_t *well)
+game_init_well_state(well)
+     uint16_t *well;
 {
     uint16_t i;
 
@@ -416,7 +445,11 @@ game_init_well_state(uint16_t *well)
 }
 
 static void
-game_set_piece(uint16_t *well, const uint16_t *piece, int x, int y)
+game_set_piece(well, piece, x, y)
+     uint16_t *well;
+     uint16_t *piece;
+     int x;
+     int y;
 {
     uint16_t *w = &well[y];
 
@@ -427,9 +460,13 @@ game_set_piece(uint16_t *well, const uint16_t *piece, int x, int y)
 }
 
 static bool
-game_can_do(const uint16_t *well, const uint16_t *piece, int x, int y)
+game_can_do(well, piece, x, y)
+     uint16_t *well;
+     uint16_t *piece;
+     int x;
+     int y;
 {
-    const uint16_t *w = &well[y];
+    uint16_t *w = &well[y];
 
     return ((w[0] & (piece[0] >> x)) == 0 &&
 	    (w[1] & (piece[1] >> x)) == 0 &&
@@ -438,7 +475,9 @@ game_can_do(const uint16_t *well, const uint16_t *piece, int x, int y)
 }
 
 static uint16_t
-game_check_complete_lines(const uint16_t *well, uint16_t *which)
+game_check_complete_lines(well, which)
+     uint16_t *well;
+     uint16_t *which;
 {
     uint16_t i;
     uint16_t j = 0;
@@ -455,7 +494,10 @@ game_check_complete_lines(const uint16_t *well, uint16_t *which)
 }
 
 static void
-game_remove_lines(uint16_t * well, const uint16_t *which, uint16_t count)
+game_remove_lines(well, which, count)
+     uint16_t *well;
+     uint16_t *which;
+     uint16_t count;
 {
     uint16_t i;
     uint16_t j;
@@ -469,7 +511,10 @@ game_remove_lines(uint16_t * well, const uint16_t *which, uint16_t count)
 }
 
 static void
-game_insert_garbage(uint16_t *well, uint16_t count, struct garbage_state *state)
+game_insert_garbage(well, count, state)
+     uint16_t *well;
+     uint16_t count;
+     struct garbage_state *state;
 {
     uint16_t i;
 
@@ -492,7 +537,8 @@ game_insert_garbage(uint16_t *well, uint16_t count, struct garbage_state *state)
 }
 
 static void
-tick_sleep(uint16_t t)
+tick_sleep(t)
+     uint16_t t;
 {
 #if defined linux
     uint16_t x = t % 60;
@@ -516,11 +562,11 @@ tick_sleep(uint16_t t)
  * extra points are not awarded for those. Access as "(number of lines * 2) +
  * previous was Tetris."
  */
-static const uint16_t points_for_lines[] = {
+static uint16_t points_for_lines[] = {
     0, 0, 100, 100, 300, 300, 500, 500, 800, 1200
 };
 
-static const uint16_t delay_for_level[] = {
+static uint16_t delay_for_level[] = {
 /*   0   1   2   3   4   5   6   7   8   9 */
     48, 43, 38, 33, 28, 23, 18, 13,  8,  6,
      5,  5,  5,  4,  4,  4,  3,  3,  3,  2,
@@ -531,7 +577,7 @@ static const uint16_t delay_for_level[] = {
  * for T-spin clears. Perfect clears, which are not currently tracked, should be
  * 10 lines of garbage (total) regardless of the clear count or bonus situation.
  */
-static const uint16_t garbage_for_lines[] = {
+static uint16_t garbage_for_lines[] = {
     0, 0, 0, 0, 1, 1, 2, 2, 4, 5
 };
 
@@ -553,6 +599,7 @@ init_file_io()
     raw.c_lflag &= ~(ECHO | ICANON);
     tcsetattr(fd, TCSAFLUSH, &raw);
 #else
+    {
     struct termio raw;
 
     ioctl(fd, TCGETA, &raw);
@@ -564,6 +611,7 @@ init_file_io()
     raw.c_cc[VTIME] = 0;
 
     ioctl(fd, TCSETA, &raw);
+    }
 #endif
 
 #ifdef HAVE_DUP2
@@ -615,7 +663,7 @@ struct widget {
     /* Up, right, down, left. */
     int8_t move[4];
     bool selected, highlighted;
-    const char *text;
+    char *text;
 };
 
 struct widget level_widgets[] = {
@@ -654,7 +702,8 @@ struct widget start_widgets[] = {
 };
 
 static void
-draw_widget(const struct widget *w)
+draw_widget(w)
+     struct widget *w;
 {
     uint16_t len = strlen(w->text);
 
@@ -682,7 +731,8 @@ draw_widget(const struct widget *w)
 }
 
 static void
-draw_widgets(const struct widget *w)
+draw_widgets(w)
+    struct widget *w;
 {
     uint16_t i;
 
@@ -691,7 +741,8 @@ draw_widgets(const struct widget *w)
 }
 
 static void
-clear_highlighted(struct widget *w)
+clear_highlighted(w)
+    struct widget *w;
 {
     uint16_t i;
 
@@ -700,7 +751,8 @@ clear_highlighted(struct widget *w)
 }
 
 static void
-copy_selected_to_highlighted(struct widget *w)
+copy_selected_to_highlighted(w)
+    struct widget *w;
 {
     uint16_t i;
 
@@ -709,7 +761,8 @@ copy_selected_to_highlighted(struct widget *w)
 }
 
 static int16_t
-get_highlighted(struct widget *w)
+get_highlighted(w)
+     struct widget *w;
 {
     uint16_t i;
 
@@ -721,7 +774,8 @@ get_highlighted(struct widget *w)
 }
 
 static int16_t
-get_selected(struct widget *w)
+get_selected(w)
+     struct widget *w;
 {
     uint16_t i;
 
@@ -733,7 +787,8 @@ get_selected(struct widget *w)
 }
 
 static bool
-do_menu_screen(struct game_mode *mode)
+do_menu_screen(mode)
+     struct game_mode *mode;
 {
     static struct widget *menus[] = {
         level_widgets,
@@ -847,9 +902,10 @@ do_menu_screen(struct game_mode *mode)
 }
 
 static int
-do_two_player_screen(uint16_t *seed)
+do_two_player_screen(seed)
+     uint16_t *seed;
 {
-    const int box_x = 40 - (46 / 2);
+    int box_x = 40 - (46 / 2);
     struct tetris_message tm;
     bool i_am_ready = false;
     bool they_are_ready = false;
@@ -941,7 +997,9 @@ struct rng_state {
 };
 
 static void
-rng_state_init(struct rng_state *s, uint16_t seed)
+rng_state_init(s, seed)
+     struct rng_state *s;
+     uint16_t seed;
 {
     /* Tetrominos are numbered [0, 6]. For the initial state, select different
      * invalid numbers for curr and prev.
@@ -951,8 +1009,9 @@ rng_state_init(struct rng_state *s, uint16_t seed)
     s->seed = seed;
 }
 
-static const struct tetromino *
-select_piece(struct rng_state *s)
+static struct tetromino *
+select_piece(s)
+     struct rng_state *s;
 {
     uint8_t rng = (lfsr_galois(&s->seed) >> 8) % 7u;
 
@@ -994,7 +1053,10 @@ enum game_state {
 };
 
 static void
-play_game(uint16_t initial_level, uint16_t seed, bool two_player)
+play_game(initial_level, seed, two_player)
+     uint16_t initial_level;
+     uint16_t seed;
+     bool two_player;
 {
     uint16_t well[WELL_SIZE];
     uint16_t piece_counts[7];
@@ -1024,8 +1086,8 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
     uint16_t complete[4];
     uint16_t complete_count;
 
-    const struct tetromino *next_piece;
-    const struct tetromino *piece;
+    struct tetromino *next_piece;
+    struct tetromino *piece;
     enum game_state state;
 
     gs.garbage = 0;
@@ -1335,7 +1397,9 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
 }
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+     int argc;
+     char **argv;
 {
     init_file_io();
 
