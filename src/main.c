@@ -494,10 +494,10 @@ game_insert_garbage(uint16_t *well, uint16_t count, struct garbage_state *state)
     }
 }
 
-#if defined linux
 static void
 tick_sleep(uint16_t t)
 {
+#if defined linux
     uint16_t x = t % 60;
     struct timespec duration = { t / 60, 0 };
 
@@ -505,8 +505,15 @@ tick_sleep(uint16_t t)
 	duration.tv_nsec = 1000000000 / (60 / x);
 
     nanosleep(&duration, NULL);
-}
+#else
+    struct tms tm;
+
+    long x = times(&tm) + t;
+
+    while (times(&tm) < x)
+        ;
 #endif
+}
 
 /* This is mostly the "guideline scoring system." T-spins are not detected, so
  * extra points are not awarded for those. Access as "(number of lines * 2) +
