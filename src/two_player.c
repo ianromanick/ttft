@@ -30,11 +30,13 @@ static int my_qid = -1;
 static int other_qid = -1;
 static const char *msg_file = "/tmp/tetris-xxx";
 
-static void
-exit_handler()
+void
+fully_disconnect()
 {
-    msgctl(my_qid, IPC_RMID, NULL);
-    unlink(msg_file);
+    if (my_qid >= 0) {
+        msgctl(my_qid, IPC_RMID, NULL);
+        my_qid = -1;
+    }
 }
 
 int
@@ -93,6 +95,7 @@ connect_to_other_game(uint16_t *seed)
     struct tetris_message tm;
 
     umask(0);
+    atexit(fully_disconnect);
 
 #ifdef S_IRUSR
 #define PERM (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
@@ -152,9 +155,11 @@ connect_to_other_game(uint16_t *seed)
         if (tm.qid != other_qid || tm.msg_type != ACK_RNG_SEED)
             return -1;
     } else {
-        atexit(exit_handler);
+        ret = msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0);
 
-        if (msgrcv(my_qid, &tm, sizeof(tm) - sizeof(long), 0, 0) == -1) {
+        unlink(msg_file);
+
+        if (ret == -1) {
             perror("msgrcv - server waiting for RNG seed");
             return -1;
         }

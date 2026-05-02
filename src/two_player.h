@@ -52,6 +52,7 @@ struct tetris_message {
 };
 
 extern int connect_to_other_game(uint16_t *seed);
+extern void fully_disconnect(void);
 extern int send_ready(void);
 extern int send_game_over(uint32_t score);
 extern int send_score(uint32_t score, uint16_t garbage_lines);

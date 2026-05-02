@@ -1345,6 +1345,7 @@ main(int argc, char **argv)
         }
     }
 
+    fully_disconnect();
     fputs("\x1b[24;0f", stdout);
     fputs("\x1b[?25h", stdout);
     return 0;
