@@ -14,7 +14,11 @@
 #include <stdlib.h>
 #endif
 
+#ifdef HAVE_TERMIOS_H
 #include <termios.h>
+#else
+#include <termio.h>
+#endif
 
 #ifdef linux
 #include <time.h>
@@ -531,7 +535,6 @@ static void
 init_file_io()
 {
     int fd;
-    struct termios raw;
 
     fd = open("/dev/tty", O_RDWR | O_NDELAY);
     if (fd == -1) {
@@ -539,9 +542,25 @@ init_file_io()
         exit(1);
     }
 
+#ifdef HAVE_TERMIOS_H
+    struct termios raw;
+
     tcgetattr(fd, &raw);
     raw.c_lflag &= ~(ECHO | ICANON);
     tcsetattr(fd, TCSAFLUSH, &raw);
+#else
+    struct termio raw;
+
+    ioctl(fd, TCGETA, &raw);
+    raw.c_lflag &= ~(ECHO | ICANON);
+    raw.c_iflag &= ~(ICRNL | INLCR);
+
+    /* librcurses napms uses VTIME to implement the wait. */
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 0;
+
+    ioctl(fd, TCSETA, &raw);
+#endif
 
 #ifdef HAVE_DUP2
     dup2(fd, 0);
