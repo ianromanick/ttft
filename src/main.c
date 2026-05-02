@@ -583,7 +583,13 @@ do_title_screen()
 {
     /* Cursor off, clear screen. */
     fputs("\033[?25l\033[2J", stdout);
-    move_to(40 - (23 / 2), 10);
+    move_to(1, 9);
+    printf("\033#3");
+    move_to(1, 9);
+    printf("Terminal Tetris for Two");
+    move_to(1, 10);
+    printf("\033#4");
+    move_to(1, 10);
     printf("Terminal Tetris for Two");
     move_to(40 - (42 / 2), 11);
     printf("Press Q to quit, or any other key to play.");
