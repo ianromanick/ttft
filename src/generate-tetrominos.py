@@ -195,20 +195,20 @@ def generate_draw(t, erase=False):
                         continue
                     else:
                         if y - last_y == 1:
-                            s += '\\x1b[B'
+                            s += '\\033[B'
                         else:
-                            s += f'\\x1b[{y-last_y}B'
+                            s += f'\\033[{y-last_y}B'
 
                         if x == last_x:
                             pass
                         elif x - last_x == 1:
-                            s += '\\x1b[C'
+                            s += '\\033[C'
                         elif x - last_x == -1:
-                            s += '\\x1b[D'
+                            s += '\\033[D'
                         elif x > last_x:
-                            s += f'\\x1b[{x-last_x}C'
+                            s += f'\\033[{x-last_x}C'
                         else:
-                            s += f'\\x1b[{last_x-x}D'
+                            s += f'\\033[{last_x-x}D'
 
                         last_y = y
 

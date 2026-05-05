@@ -88,9 +88,9 @@ static void
 move_to(uint16_t x, uint16_t y)
 {
     if (y == 0) {
-	printf("\x1b[;%df", x);
+	printf("\033[;%df", x);
     } else {
-	printf("\x1b[%d;%df", y, x);
+	printf("\033[%d;%df", y, x);
     }
 }
 
@@ -105,7 +105,7 @@ draw_box(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     uint16_t i;
 
-    printf("\x1b(0\x1b[7m");
+    printf("\033(0\033[7m");
 
     move_to(x, y);
     printf("lw");
@@ -114,15 +114,15 @@ draw_box(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 
     for (i = 2; i < h; i++) {
         move_to(x, y + i - 1);
-        printf("xx\x1b[0m");
+        printf("xx\033[0m");
         fwrite(spc80, 1, w - 4, stdout);
-        printf("\x1b[7mxx");
+        printf("\033[7mxx");
     }
 
     move_to(x, y + h - 1);
     printf("wv");
     fwrite(q80, 1, w - 4, stdout);
-    printf("vj\x1b[0m");
+    printf("vj\033[0m");
 }
 
 static void
@@ -133,12 +133,12 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
     uint16_t j;
     char border[2];
 
-    fputs("\x1b[3;20f\x1b[7m\x1b(0", stdout);
+    fputs("\033[3;20f\033[7m\033(0", stdout);
 
     border[0] = 'l';
     border[1] = 'k';
     for (i = WELL_SPAWN; i < 20 + WELL_SPAWN; i++) {
-	printf("\x1b[7m%c%c\x1b[m", border[0], border[1]);
+	printf("\033[7m%c%c\033[m", border[0], border[1]);
 
 	for (j = 15; j > 5; j--) {
 	    const uint16_t bit = 1u << j;
@@ -150,43 +150,43 @@ draw_well_from_scratch(const uint16_t *well, const uint16_t *piece_counts,
 	    }
 	}
 
-	printf("\x1b[7m%c%c\n\x1b[19C", border[0], border[1]);
+	printf("\033[7m%c%c\n\033[19C", border[0], border[1]);
 	border[0] = 'x';
 	border[1] = 'x';
     }
 
-    fputs("mvqqqqqqqqqqqqqqqqqqqqvj\x1b(B", stdout);
+    fputs("mvqqqqqqqqqqqqqqqqqqqqvj\033(B", stdout);
 
-    fprintf(stdout, "\x1b[3f\x1b[7m\x1b(0");
+    fprintf(stdout, "\033[3f\033[7m\033(0");
     fprintf(stdout, "lwqqqqqqqqqqqqwk\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m \x1b(BTop Score  \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m \x1b(BScore      \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m \x1b(BLines      \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m \x1b(BLevel      \x1b(0\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "xx\x1b[m\x1b[12C\x1b[7mxx\n");
-    fprintf(stdout, "mvqqqqqqqqqqqqvj\x1b(B");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m \033(BTop Score  \033(0\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m \033(BScore      \033(0\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m \033(BLines      \033(0\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m \033(BLevel      \033(0\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "xx\033[m\033[12C\033[7mxx\n");
+    fprintf(stdout, "mvqqqqqqqqqqqqvj\033(B");
 
-    fprintf(stdout, "\x1b[3;46f\x1b[7m\x1b(0");
-    fprintf(stdout, "lwqq\x1b[m NEXT \x1b[7mqqwk\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "xx\x1b[m          \x1b[7mxx\x1b[B\x1b[14D");
-    fprintf(stdout, "mvqqqqqqqqqqvj\x1b(B");
+    fprintf(stdout, "\033[3;46f\033[7m\033(0");
+    fprintf(stdout, "lwqq\033[m NEXT \033[7mqqwk\033[B\033[14D");
+    fprintf(stdout, "xx\033[m          \033[7mxx\033[B\033[14D");
+    fprintf(stdout, "xx\033[m          \033[7mxx\033[B\033[14D");
+    fprintf(stdout, "xx\033[m          \033[7mxx\033[B\033[14D");
+    fprintf(stdout, "xx\033[m          \033[7mxx\033[B\033[14D");
+    fprintf(stdout, "xx\033[m          \033[7mxx\033[B\033[14D");
+    fprintf(stdout, "xx\033[m          \033[7mxx\033[B\033[14D");
+    fprintf(stdout, "mvqqqqqqqqqqvj\033(B");
 
-    fprintf(stdout, "\x1b[3;61f\x1b[0m\x1b)0");
+    fprintf(stdout, "\033[3;61f\033[0m\033)0");
     for (i = 0; i < 7; i++) {
-	printf("%c: %d\x1b[%d;61f", all_pieces[i].name,
+	printf("%c: %d\033[%d;61f", all_pieces[i].name,
 	       piece_counts[i], 4 + i);
     }
 }
@@ -195,41 +195,41 @@ static void
 draw_controls(void)
 {
     fprintf(stdout,
-	    "\x1b[13;46f"
-	    "\x1b[14;46f rotate              rotate"
-	    "\x1b[15;46f counter            clockwise"
-	    "\x1b[16;46fclockwise          /"
-	    "\x1b[17;46f          \\       /"
-	    "\x1b[18;46f           q     e"
-	    "\x1b[19;46f           a  s  d"
-	    "\x1b[20;46f          /   |   \\"
-	    "\x1b[21;46f      move    |    move"
-	    "\x1b[22;46f     left     |     right"
-	    "\x1b[23;46f            hard"
-	    "\x1b[24;46f            drop"
-	    "\x1b[3;61f\x1b[0m\x1b)0");
+	    "\033[13;46f"
+	    "\033[14;46f rotate              rotate"
+	    "\033[15;46f counter            clockwise"
+	    "\033[16;46fclockwise          /"
+	    "\033[17;46f          \\       /"
+	    "\033[18;46f           q     e"
+	    "\033[19;46f           a  s  d"
+	    "\033[20;46f          /   |   \\"
+	    "\033[21;46f      move    |    move"
+	    "\033[22;46f     left     |     right"
+	    "\033[23;46f            hard"
+	    "\033[24;46f            drop"
+	    "\033[3;61f\033[0m\033)0");
 }
 
 static void
 erase_piece(const struct tetromino *t,
 	   uint16_t x, uint16_t y, uint16_t rotation)
 {
-    printf("\x1b[m\x1b(0");
+    printf("\033[m\033(0");
     move_to(22 + 2 * x, y);
     fwrite(t->f[rotation].erase, 1,
 	   strlen(t->f[rotation].erase), stdout);
-    printf("\x1b[m\x1b(B");
+    printf("\033[m\033(B");
 }
 
 static void
 draw_piece(const struct tetromino *t,
 	   uint16_t x, uint16_t y, uint16_t rotation)
 {
-    printf("\x1b[7m\x1b(0");
+    printf("\033[7m\033(0");
     move_to(22 + 2 * x, y);
     fwrite(t->f[rotation].draw, 1,
 	   strlen(t->f[rotation].draw), stdout);
-    printf("\x1b[m\x1b(B");
+    printf("\033[m\033(B");
 }
 
 static void
@@ -238,7 +238,7 @@ draw_complete_lines(const uint16_t *complete, uint16_t count)
     uint16_t i;
 
     for (i = 0; i < count; i++) {
-	printf("\x1b[%d;22f\x1b(0\x1b[5maaaaaaaaaaaaaaaaaaaa", complete[i]);
+	printf("\033[%d;22f\033(0\033[5maaaaaaaaaaaaaaaaaaaa", complete[i]);
     }
 }
 
@@ -316,19 +316,19 @@ draw_score(uint32_t score, uint32_t top_score, uint16_t lines, uint16_t level)
     int len;
 
     len = format_number_u32(top_score, buf);
-    fprintf(stdout, "\x1b[m\x1b[6;%df", (3 + 2 + 10) - len);
+    fprintf(stdout, "\033[m\033[6;%df", (3 + 2 + 10) - len);
     fwrite(buf, 1, len - 1, stdout);
 
     len = format_number_u32(score, buf);
-    fprintf(stdout, "\x1b[m\x1b[9;%df", (3 + 2 + 10) - len);
+    fprintf(stdout, "\033[m\033[9;%df", (3 + 2 + 10) - len);
     fwrite(buf, 1, len - 1, stdout);
 
     len = format_number_u16(lines, buf);
-    fprintf(stdout, "\x1b[12;%df", (3 + 2 + 10) - len);
+    fprintf(stdout, "\033[12;%df", (3 + 2 + 10) - len);
     fwrite(buf, 1, len - 1, stdout);
 
     len = format_number_u16(level, buf);
-    fprintf(stdout, "\x1b[15;%df", (3 + 2 + 10) - len);
+    fprintf(stdout, "\033[15;%df", (3 + 2 + 10) - len);
     fwrite(buf, 1, len - 1, stdout);
 }
 
@@ -582,7 +582,7 @@ static int
 do_title_screen()
 {
     /* Cursor off, clear screen. */
-    fputs("\x1b[?25l\x1b[2J", stdout);
+    fputs("\033[?25l\033[2J", stdout);
     move_to(40 - (23 / 2), 10);
     printf("Terminal Tetris for Two");
     move_to(40 - (42 / 2), 11);
@@ -654,19 +654,19 @@ draw_widget(const struct widget *w)
 
     move_to(w->x, w->y);
 
-    fputs(w->highlighted ? "\x1b[7m" : "\x1b[0m", stdout);
+    fputs(w->highlighted ? "\033[7m" : "\033[0m", stdout);
     fwrite(spc80, 1, len + 4, stdout);
 
     move_to(w->x, w->y + 1);
     fwrite(spc80, 1, 2, stdout);
 
     if (w->selected != w->highlighted)
-        fputs(w->selected ? "\x1b[7m" : "\x1b[0m", stdout);
+        fputs(w->selected ? "\033[7m" : "\033[0m", stdout);
 
     fputs(w->text, stdout);
 
     if (w->selected != w->highlighted)
-        fputs(w->highlighted ? "\x1b[7m" : "\x1b[0m", stdout);
+        fputs(w->highlighted ? "\033[7m" : "\033[0m", stdout);
 
     fwrite(spc80, 1, 2, stdout);
 
@@ -738,7 +738,7 @@ do_menu_screen(struct game_mode *mode)
     uint16_t m = 0;
 
     /* Cursor off, clear screen. */
-    fputs("\x1b[?25l\x1b[2J", stdout);
+    fputs("\033[?25l\033[2J", stdout);
 
     move_to(2, 2);
     printf("W-A-S-D to navigate a menu. Enter to select. Tab to skip.");
@@ -852,7 +852,7 @@ do_two_player_screen(uint16_t *seed)
     draw_box(box_x, 7, 46, 7);
 
     move_to(box_x + 3, 9);
-    printf("\x1b(BConnecting to other player...");
+    printf("\033(BConnecting to other player...");
 
     fflush(stdout);
 
@@ -1031,7 +1031,7 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
     game_init_well_state(well);
 
     /* Cursor off, clear screen. */
-    fputs("\x1b[?25l\x1b[2J", stdout);
+    fputs("\033[?25l\033[2J", stdout);
 
     next_piece = select_piece(&rngs);
     piece = next_piece;
@@ -1356,7 +1356,7 @@ main(int argc, char **argv)
     }
 
     fully_disconnect();
-    fputs("\x1b[24;0f", stdout);
-    fputs("\x1b[?25h", stdout);
+    fputs("\033[24;0f", stdout);
+    fputs("\033[?25h", stdout);
     return 0;
 }
