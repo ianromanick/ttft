@@ -1107,9 +1107,9 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
                 if (!game_can_do(well, piece->f[rotation].mask, x, y)) {
                     x = old_x;
                     rotation = old_rotation;
+                } else {
+                    redraw_piece = true;
                 }
-
-                redraw_piece = true;
             }
 
             if (state == drop_one) {
