@@ -767,24 +767,28 @@ do_menu_screen(struct game_mode *mode)
 	if (read(0, &c, 1) > 0) {
             switch (c) {
             case 'w':
+            case 'W':
                 menus[m][h].highlighted = false;
                 h += menus[m][h].move[0];
                 menus[m][h].highlighted = true;
                 redraw = true;
                 break;
             case 'a':
+            case 'A':
                 menus[m][h].highlighted = false;
                 h += menus[m][h].move[3];
                 menus[m][h].highlighted = true;
                 redraw = true;
                 break;
             case 's':
+            case 'S':
                 menus[m][h].highlighted = false;
                 h += menus[m][h].move[2];
                 menus[m][h].highlighted = true;
                 redraw = true;
                 break;
             case 'd':
+            case 'D':
                 menus[m][h].highlighted = false;
                 h += menus[m][h].move[1];
                 menus[m][h].highlighted = true;
@@ -1053,24 +1057,29 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
 
 	if (read(0, &c, 1) > 0) {
 	    switch (c) {
-	    case 'a':
+            case 'a':
+            case 'A':
 		if (x > 0)
 		    x--;
 		break;
 
-	    case 'd':
+            case 'd':
+            case 'D':
 		x++;
 		break;
 
-	    case 's': {
+            case 's':
+            case 'S': {
                 if (state < hard_drop)
                     state = hard_drop;
 
 		break;
 	    }
 
-	    case 'e':
-	    case 'q': {
+            case 'e':
+            case 'q':
+            case 'E':
+            case 'Q': {
 		int16_t dir = c == 'e' ? 1 : -1;
 		int16_t delta;
 
@@ -1082,6 +1091,7 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
 	    }
 
 	    case 'r':
+	    case 'R':
 		draw_well_from_scratch(well, piece_counts, lines);
 		fflush(stdout);
 		break;
