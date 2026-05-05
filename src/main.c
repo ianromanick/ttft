@@ -13,7 +13,7 @@
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
 #else
-#include <termio.h>
+#include <sys/termio.h>
 #endif
 
 #ifdef linux
@@ -24,6 +24,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <sys/types.h>
 #include <sys/times.h>
 
 #include "my_bool.h"
@@ -203,19 +204,14 @@ static void
 draw_controls()
 {
     fprintf(stdout,
-	    "\033[13;46f"
-	    "\033[14;46f rotate              rotate"
-	    "\033[15;46f counter            clockwise"
-	    "\033[16;46fclockwise          /"
-	    "\033[17;46f          \\       /"
-	    "\033[18;46f           q     e"
-	    "\033[19;46f           a  s  d"
-	    "\033[20;46f          /   |   \\"
-	    "\033[21;46f      move    |    move"
-	    "\033[22;46f     left     |     right"
-	    "\033[23;46f            hard"
-	    "\033[24;46f            drop"
-	    "\033[3;61f\033[0m\033)0");
+	    "\033[13;46f\033[14;46f rotate              rotate\033[15;46f counter            clockwise\033[16;46fclockwise          /\033[17;46f          \\       /\033[18;46f           q     e");
+	    printf("\033[19;46f           a  s  d");
+	    printf("\033[20;46f          /   |   \\");
+	    printf("\033[21;46f      move    |    move");
+	    printf("\033[22;46f     left     |     right");
+	    printf("\033[23;46f            hard");
+	    printf("\033[24;46f            drop");
+	    printf("\033[3;61f\033[0m\033)0");
 }
 
 static void
@@ -584,14 +580,14 @@ static uint16_t garbage_for_lines[] = {
 static void
 init_file_io()
 {
-    int fd;
-
+    int fd = 0;
+#if 0
     fd = open("/dev/tty", O_RDWR | O_NDELAY);
     if (fd == -1) {
         perror("opening TTY");
         exit(1);
     }
-
+#endif
 #ifdef HAVE_TERMIOS_H
     struct termios raw;
 
@@ -607,8 +603,8 @@ init_file_io()
     raw.c_iflag &= ~(ICRNL | INLCR);
 
     /* librcurses napms uses VTIME to implement the wait. */
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 0;
+    raw.c_cc[4] = 0;
+    raw.c_cc[5] = 0;
 
     ioctl(fd, TCSETA, &raw);
     }
@@ -618,11 +614,13 @@ init_file_io()
     dup2(fd, 0);
     dup2(fd, 1);
 #else
+#if 0
     close(0);
     dup(fd);
 
     close(1);
     dup(fd);
+#endif
 #endif
 }
 
