@@ -1215,9 +1215,6 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
 
 	    next_piece = select_piece(&rngs);
 
-	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
-	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
-
             delay = delay_reset;
             state = normal;
             redraw_piece = true;
@@ -1227,6 +1224,9 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
                draw_well_from_scratch(well, piece_counts, lines);
                garbage_lines = 0;
            }
+
+	    erase_piece(piece, 14 + piece->f[0].shift, 5, 0);
+	    draw_piece(next_piece, 14 + next_piece->f[0].shift, 5, 0);
 
 	    /* If the new piece cannot be placed, the well is full, and the
 	     * game is over.
