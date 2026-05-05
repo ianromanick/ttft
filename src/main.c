@@ -1035,22 +1035,20 @@ select_piece(s)
     return &all_pieces[rng];
 }
 
-enum game_state {
-    normal,
-    drop_one,
+#define normal 0
+#define drop_one 1
 
     /* Hard drop state must appear before states where the hard drop input is
      * ignored.
      */
-    hard_drop,
-    lock_piece,
-    clearing_lines,
-    spawn_piece,
-    close_window,
-    waiting_other_game_over,
-    waiting_game_over,
-    game_over,
-};
+#define hard_drop 2
+#define lock_piece 3
+#define clearing_lines 4
+#define spawn_piece 5
+#define close_window 6
+#define waiting_other_game_over 7
+#define waiting_game_over 8
+#define game_over 9
 
 static void
 play_game(initial_level, seed, two_player)
@@ -1088,7 +1086,7 @@ play_game(initial_level, seed, two_player)
 
     struct tetromino *next_piece;
     struct tetromino *piece;
-    enum game_state state;
+    short state;
 
     gs.garbage = 0;
     gs.remain = 0;
