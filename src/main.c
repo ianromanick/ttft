@@ -1086,7 +1086,7 @@ play_game(uint16_t initial_level, uint16_t seed, bool two_player)
 		rotation = (rotation + dir) & 3;
 
 		delta = piece->f[old_rotation].shift - piece->f[rotation].shift;
-		x = x >= delta ? x - delta : 0;
+		x = (int16_t)x >= delta ? x - delta : 0;
 		break;
 	    }
 
