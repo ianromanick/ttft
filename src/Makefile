@@ -1,18 +1,14 @@
-all: ttft
+ttft: asdf.o two_player.o
+	cc asdf.o two_player.o -o ttft
 
-CC = gcc
-CFLAGS = --std=c89 -O -ggdb3 -Wall -DHAVE_DUP2 -DHAVE_UNISTD_H -DHAVE_STDINT_H -DHAVE_STDLIB_H -DHAVE_STDBOOL_H -DHAVE_TERMIOS_H -DHAVE_ATEXIT
+pre: asdf.o two_player.o
+	cc asdf.o two_player.o -o pre
 
-OBJS = main.o two_player.o
+asdf.o: asdf.c tetrominos.h two_player.h
+	cc -O -c asdf.c
 
-ttft: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o ttft
-
-main.o: main.c tetrominos.h
 two_player.o: two_player.c two_player.h
-
-tetrominos.h: generate-tetrominos.py
-	python generate-tetrominos.py > tetrominos.h
+	cc -O -c two_player.c
 
 clean:
-	rm -f $(OBJS) ttft tetrominos.h
+	rm -f two_player.o asdf.o asdf_f.o pre
