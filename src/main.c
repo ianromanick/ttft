@@ -628,7 +628,7 @@ struct widget level_widgets[] = {
 };
 
 struct widget players_widgets[] = {
-    {  1, 11, {  1,  1,  1,  1 }, false, false, "   # of players (not implemented)" },
+    {  1, 11, {  1,  1,  1,  1 }, false, false, "                     # of players" },
     { 42, 11, {  0,  1,  0,  0 }, true,  false, "1 Player" },
     { 59, 11, {  0,  0,  0, -1 }, false, false, "2 Player" },
     { -1, },
