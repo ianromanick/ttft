@@ -59,9 +59,6 @@ struct tetromino {
     /* One of O, I, S, Z, L, J, or T. */
     char name;
 
-    /* Number of animation frames. 1, 2, or 4. */
-    uint8_t frames;
-
     struct tetromino_frame f[4];
 };
 

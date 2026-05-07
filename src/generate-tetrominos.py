@@ -230,7 +230,7 @@ def generate_draw(t, erase=False):
 
 def emit(name, draw, erase, mask):
     print("    {")
-    print(f"        '{name}', 4,")
+    print(f"        '{name}',")
     print("        {")
     for i in range(4):
         print( "            {")
