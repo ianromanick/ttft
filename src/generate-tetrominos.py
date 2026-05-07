@@ -195,20 +195,20 @@ def generate_draw(t, erase=False):
                         continue
                     else:
                         if y - last_y == 1:
-                            s += '\\033[B'
+                            s += chr(0x1b) + '[B'
                         else:
-                            s += f'\\033[{y-last_y}B'
+                            s += chr(0x1b) + f'[{y-last_y}B'
 
                         if x == last_x:
                             pass
                         elif x - last_x == 1:
-                            s += '\\033[C'
+                            s += chr(0x1b) + '[C'
                         elif x - last_x == -1:
-                            s += '\\033[D'
+                            s += chr(0x1b) + '[D'
                         elif x > last_x:
-                            s += f'\\033[{x-last_x}C'
+                            s += chr(0x1b) + f'[{x-last_x}C'
                         else:
-                            s += f'\\033[{last_x-x}D'
+                            s += chr(0x1b) + f'[{last_x-x}D'
 
                         last_y = y
 
@@ -228,18 +228,26 @@ def generate_draw(t, erase=False):
 
     return frames
 
+def cstr(s):
+    cstr_translation = str.maketrans({
+        '\n': '\\n',
+        chr(0x1b): '\\033'
+    })
+
+    return s.translate(cstr_translation)
+
 def emit(name, draw, erase, mask):
     print("    {")
     print(f"        '{name}',")
     print("        {")
     for i in range(4):
         print( "            {")
-        print(f"                {mask[i][0]},")
+        print(f"                {mask[i][0]}, {len(draw[i])}, {len(erase[i])},")
         print( "                {")
         print(f"                    {mask[i][1]}, {mask[i][2]}, {mask[i][3]}, {mask[i][4]}")
         print( "                },")
-        print(f"                \"{draw[i]}\",")
-        print(f"                \"{erase[i]}\"")
+        print(f"                \"{cstr(draw[i])}\",")
+        print(f"                \"{cstr(erase[i])}\"")
         print( "            },")
 
     print("        }")

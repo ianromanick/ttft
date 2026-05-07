@@ -50,6 +50,8 @@
 
 struct tetromino_frame {
     uint16_t shift;
+    uint8_t draw_len;
+    uint8_t erase_len;
     uint16_t mask[4];
     const char *draw;
     const char *erase;
@@ -213,8 +215,7 @@ erase_piece(const struct tetromino *t,
 {
     printf("\033[m\033(0");
     move_to(22 + 2 * x, y);
-    fwrite(t->f[rotation].erase, 1,
-	   strlen(t->f[rotation].erase), stdout);
+    fwrite(t->f[rotation].erase, 1, t->f[rotation].erase_len, stdout);
     printf("\033[m\033(B");
 }
 
@@ -224,8 +225,7 @@ draw_piece(const struct tetromino *t,
 {
     printf("\033[7m\033(0");
     move_to(22 + 2 * x, y);
-    fwrite(t->f[rotation].draw, 1,
-	   strlen(t->f[rotation].draw), stdout);
+    fwrite(t->f[rotation].draw, 1, t->f[rotation].draw_len, stdout);
     printf("\033[m\033(B");
 }
 
